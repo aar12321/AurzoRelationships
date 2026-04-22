@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-cream-50 text-charcoal-700 font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv02';
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-serif text-charcoal-900;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .card-journal {
+    @apply bg-ivory-50 rounded-journal shadow-warm border border-cream-200 p-5;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-journal bg-terracotta-600
+           px-4 py-2 text-sm font-medium text-ivory-50 shadow-warm
+           hover:bg-terracotta-700 transition-colors;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-journal
+           px-3 py-2 text-sm text-charcoal-700 hover:bg-cream-100
+           transition-colors;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-cream-200
+           bg-ivory-50 px-3 py-1 text-xs text-charcoal-500;
+  }
+}
