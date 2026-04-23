@@ -8,9 +8,12 @@ import { useNotificationsStore } from '@/stores/notificationsStore';
 import { aiSurfacePulse } from '@/services/aiService';
 import { upcomingWithin } from '@/services/datesService';
 import { computeStrength } from '@/services/interactionsService';
+import { getMyProfile } from '@/services/coreService';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
+import OnboardingFlow from '@/features/onboarding/OnboardingFlow';
+import type { AurzoProfile } from '@/types/core';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
@@ -21,6 +24,8 @@ export default function Dashboard() {
   const name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'friend';
   const [pulseBusy, setPulseBusy] = useState(false);
   const [pulseMsg, setPulseMsg] = useState<string | null>(null);
+  const [profile, setProfile] = useState<AurzoProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   async function surfacePulse() {
     if (pulseBusy) return;
@@ -42,6 +47,22 @@ export default function Dashboard() {
     if (dates.length === 0) void loadDates();
     if (interactions.length === 0) void loadIx();
   }, [loadPeople, loadDates, loadIx, people.length, dates.length, interactions.length]);
+
+  useEffect(() => {
+    void getMyProfile()
+      .then((p) => setProfile(p))
+      .finally(() => setProfileLoaded(true));
+  }, []);
+
+  if (profileLoaded && profile && !profile.onboarded_at) {
+    return (
+      <OnboardingFlow
+        onDone={() =>
+          setProfile({ ...profile, onboarded_at: new Date().toISOString() })
+        }
+      />
+    );
+  }
 
   const upcoming = useMemo(() => upcomingWithin(dates, 31).slice(0, 5), [dates]);
 
