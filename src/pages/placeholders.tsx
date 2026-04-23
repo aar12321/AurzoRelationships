@@ -1,28 +1,8 @@
 import ModulePlaceholder from '@/components/layout/ModulePlaceholder';
 
-export const PeopleDirectory = () => (
-  <ModulePlaceholder
-    title="People"
-    tagline="The people who matter, remembered with care."
-    invitation="No one added yet — start with someone who's been on your mind."
-  />
-);
-
-export const AddPerson = () => (
-  <ModulePlaceholder
-    title="Add someone"
-    tagline="A guided, gentle flow — only a name is required."
-    invitation="Who would you like to remember better?"
-  />
-);
-
-export const PersonProfile = () => (
-  <ModulePlaceholder
-    title="Person profile"
-    tagline="Everything you know about them, in one warm place."
-    invitation="Select a person to see their story, your shared history, and what's coming up."
-  />
-);
+export { default as PeopleDirectory } from '@/features/people/PeopleDirectoryPage';
+export { default as AddPerson } from '@/features/people/AddPersonPage';
+export { default as PersonProfile } from '@/features/people/PersonProfilePage';
 
 export const PersonMemories = () => (
   <ModulePlaceholder
