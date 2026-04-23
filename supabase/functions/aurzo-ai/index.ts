@@ -37,7 +37,8 @@ type Action =
   | { action: 'gift_ideas'; person: PersonCtx; budget?: number; occasion?: string }
   | { action: 'date_ideas'; shared_interests?: string[]; budget?: string; location?: string }
   | { action: 'weekly_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
-  | { action: 'surface_pulse'; people: PersonCtx[]; dates?: DateCtx[] };
+  | { action: 'surface_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
+  | { action: 'cron_pulse'; target_user_id: string };
 
 type PersonCtx = {
   full_name: string;
@@ -57,6 +58,21 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'missing auth' }, 401, cors);
 
+    const body: Action = await req.json();
+
+    // Service-role path: pg_cron dispatches with the service key. No end-user
+    // JWT is involved, so we authenticate by comparing the bearer against the
+    // injected SUPABASE_SERVICE_ROLE_KEY.
+    if (body.action === 'cron_pulse') {
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const bearer = authHeader.replace(/^Bearer\s+/i, '');
+      if (!serviceKey || bearer !== serviceKey) {
+        return json({ error: 'cron_pulse requires service role' }, 403, cors);
+      }
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
+      return json(await cronPulse(body, admin), 200, cors);
+    }
+
     const supa = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -64,8 +80,6 @@ Deno.serve(async (req) => {
     );
     const { data: { user } } = await supa.auth.getUser();
     if (!user) return json({ error: 'unauthorized' }, 401, cors);
-
-    const body: Action = await req.json();
 
     if (body.action === 'advise' && body.stream) {
       return streamAdvise(body, cors);
@@ -90,7 +104,8 @@ async function handle(body: Action): Promise<unknown> {
     case 'advise':       return advise(body);
     case 'weekly_pulse': return weeklyPulse(body);
     case 'surface_pulse':
-      throw new Error('surface_pulse handled inline');
+    case 'cron_pulse':
+      throw new Error(body.action + ' handled inline');
   }
 }
 
@@ -134,19 +149,99 @@ function streamAdvise(
 
 // surface_pulse — generates the Sunday pulse and writes it as an
 // aurzo_core.notification for the requesting user. The client can render it
-// immediately; a future pg_cron job will call the same action for all users.
+// immediately; pg_cron calls cron_pulse below for the batched weekly run.
 async function surfacePulse(
   b: Extract<Action, { action: 'surface_pulse' }>,
   userId: string,
   supa: ReturnType<typeof createClient>,
 ): Promise<unknown> {
-  const pulse = await weeklyPulse({ ...b, action: 'weekly_pulse' } as unknown as Extract<Action, { action: 'weekly_pulse' }>) as {
-    person_name: string; message: string; suggested_action?: string;
-  };
+  return writePulse(
+    { people: b.people, dates: b.dates },
+    userId,
+    supa,
+    { dedupDays: 0 },
+  );
+}
 
-  if (!pulse || !pulse.message) return { created: false };
+// cron_pulse — called by pg_cron with the service role. Loads the target
+// user's people/dates from Relationship OS, dedups against the last 6 days,
+// then generates + writes the notification.
+async function cronPulse(
+  b: Extract<Action, { action: 'cron_pulse' }>,
+  admin: ReturnType<typeof createClient>,
+): Promise<unknown> {
+  const userId = b.target_user_id;
 
-  const { data, error } = await supa
+  const { data: people, error: pErr } = await admin
+    .schema('relationship_os')
+    .from('people')
+    .select('full_name, relationship_type, notes, interests, life_context, last_contacted_at, deleted_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .limit(40);
+  if (pErr) throw pErr;
+  if (!people || people.length === 0) return { skipped: 'no_people' };
+
+  const horizon = new Date();
+  horizon.setDate(horizon.getDate() + 30);
+  const { data: dates, error: dErr } = await admin
+    .schema('relationship_os')
+    .from('important_dates')
+    .select('label, event_date')
+    .eq('user_id', userId)
+    .lte('event_date', horizon.toISOString().slice(0, 10))
+    .order('event_date', { ascending: true })
+    .limit(10);
+  if (dErr) throw dErr;
+
+  return writePulse(
+    {
+      people: (people ?? []).map((p) => ({
+        full_name: p.full_name as string,
+        relationship_type: p.relationship_type as string | null,
+        notes: p.notes as string | null,
+        interests: p.interests as string | null,
+        life_context: p.life_context as Record<string, unknown> | null,
+        last_contacted_at: p.last_contacted_at as string | null,
+      })),
+      dates: (dates ?? []).map((d) => ({
+        label: d.label as string,
+        event_date: d.event_date as string,
+      })),
+    },
+    userId,
+    admin,
+    { dedupDays: 6 },
+  );
+}
+
+async function writePulse(
+  ctx: { people: PersonCtx[]; dates?: DateCtx[] },
+  userId: string,
+  client: ReturnType<typeof createClient>,
+  opts: { dedupDays: number },
+): Promise<unknown> {
+  if (opts.dedupDays > 0) {
+    const cutoff = new Date(Date.now() - opts.dedupDays * 86400_000).toISOString();
+    const { count } = await client
+      .schema('aurzo_core')
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('category', 'weekly_pulse')
+      .gte('created_at', cutoff);
+    if ((count ?? 0) > 0) return { skipped: 'deduped' };
+  }
+
+  const pulse = await weeklyPulse({
+    action: 'weekly_pulse',
+    people: ctx.people,
+    dates: ctx.dates,
+  }) as { person_name: string; message: string; suggested_action?: string };
+
+  if (!pulse || !pulse.message) return { skipped: 'no_pulse' };
+
+  const { data, error } = await client
     .schema('aurzo_core')
     .from('notifications')
     .insert({
