@@ -23,6 +23,7 @@ import {
   Settings,
 } from '@/pages/placeholders';
 import NotificationsPage from '@/features/notifications/NotificationsPage';
+import TodayPage from '@/features/today/TodayPage';
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="today" element={<TodayPage />} />
         <Route path="people" element={<PeopleDirectory />} />
         <Route path="people/new" element={<AddPerson />} />
         <Route path="people/:id" element={<PersonProfile />} />

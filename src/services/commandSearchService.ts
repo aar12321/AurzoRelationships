@@ -30,6 +30,7 @@ export type CommandGroup = { kind: CommandKind; title: string; items: CommandIte
 
 const PAGES: { to: string; label: string; keywords?: string[] }[] = [
   { to: '/relationships',          label: 'Home',        keywords: ['dashboard', 'pulse'] },
+  { to: '/relationships/today',    label: 'Today',       keywords: ['feed', 'digest', 'daily', 'inbox'] },
   { to: '/relationships/people',   label: 'People',      keywords: ['directory', 'contacts'] },
   { to: '/relationships/dates',    label: 'Dates',       keywords: ['birthday', 'anniversary'] },
   { to: '/relationships/health',   label: 'Health',      keywords: ['strength', 'reach out'] },

@@ -8,6 +8,7 @@ import { useGlobalHotkeys } from '@/hooks/useGlobalHotkeys';
 
 const nav = [
   { to: '/relationships',          label: 'Home' },
+  { to: '/relationships/today',    label: 'Today' },
   { to: '/relationships/people',   label: 'People' },
   { to: '/relationships/dates',    label: 'Dates' },
   { to: '/relationships/health',   label: 'Health' },
