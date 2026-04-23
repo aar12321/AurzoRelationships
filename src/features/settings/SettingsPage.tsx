@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { getMyProfile, listApps, updateMyProfile } from '@/services/coreService';
 import { setTheme } from '@/services/themeService';
+import {
+  readLayoutPref,
+  writeLayoutPref,
+  type LayoutPref,
+} from '@/services/layoutModeService';
 import type { AurzoApp, AurzoProfile } from '@/types/core';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
 
@@ -12,6 +17,7 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [layoutPref, setLayoutPref] = useState<LayoutPref>(() => readLayoutPref());
 
   useEffect(() => {
     void getMyProfile().then((p) => {
@@ -20,6 +26,13 @@ export default function SettingsPage() {
     });
     void listApps().then(setApps);
   }, []);
+
+  function changeLayout(next: LayoutPref) {
+    setLayoutPref(next);
+    writeLayoutPref(next);
+    setMsg('Layout updated');
+    setTimeout(() => setMsg(null), 1200);
+  }
 
   async function save<K extends keyof AurzoProfile>(key: K, value: AurzoProfile[K]) {
     if (!user || !profile) return;
@@ -79,6 +92,37 @@ export default function SettingsPage() {
               {saving && <p className="text-xs text-charcoal-500">Saving…</p>}
             </div>
           )}
+        </div>
+
+        <div className="card-journal">
+          <h2 className="font-serif text-2xl mb-1">Layout</h2>
+          <p className="text-sm text-charcoal-500 dark:text-charcoal-300 mb-4">
+            Auto follows your screen size. Force mobile for a bottom-tab shell
+            on any device, or desktop for the full sidebar.
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {(['auto', 'mobile', 'desktop'] as LayoutPref[]).map((opt) => (
+              <button key={opt} onClick={() => changeLayout(opt)}
+                className={[
+                  'rounded-journal border px-3 py-3 text-sm text-center transition-colors',
+                  layoutPref === opt
+                    ? 'border-terracotta-500 bg-terracotta-500/10 text-terracotta-700 dark:text-terracotta-300'
+                    : 'border-cream-200 dark:border-charcoal-700 hover:bg-cream-100 dark:hover:bg-charcoal-800',
+                ].join(' ')}>
+                <div className="text-lg mb-1" aria-hidden>
+                  {opt === 'auto' ? '🖥️📱' : opt === 'mobile' ? '📱' : '🖥️'}
+                </div>
+                <div className="font-medium capitalize">{opt}</div>
+                <div className="text-[11px] text-charcoal-500 dark:text-charcoal-300 mt-0.5">
+                  {opt === 'auto'
+                    ? 'Follow screen'
+                    : opt === 'mobile'
+                    ? 'Bottom tabs'
+                    : 'Sidebar'}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="card-journal">
