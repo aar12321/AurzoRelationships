@@ -70,6 +70,29 @@ export async function deleteMemory(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Attempts to upload a photo to the 'memories' Supabase Storage bucket. If
+// the bucket doesn't exist or the upload fails for any reason, returns null
+// so the caller can still save a text-only memory. We intentionally do NOT
+// throw — a failed photo shouldn't block the user's capture flow.
+export async function uploadMemoryPhoto(
+  file: File,
+  ownerId: string,
+): Promise<string | null> {
+  try {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const path = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await supabase.storage
+      .from('memories')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) { console.warn('[memories] upload failed:', error.message); return null; }
+    const { data } = supabase.storage.from('memories').getPublicUrl(path);
+    return data.publicUrl ?? null;
+  } catch (e) {
+    console.warn('[memories] upload error:', e);
+    return null;
+  }
+}
+
 export function onThisDay(memories: Memory[], when = new Date()): Memory[] {
   const m = when.getMonth();
   const d = when.getDate();

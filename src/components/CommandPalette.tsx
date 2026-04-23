@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCommandPaletteStore } from '@/stores/commandPaletteStore';
+import { useCaptureMomentStore } from '@/stores/captureMomentStore';
 import { usePeopleStore } from '@/stores/peopleStore';
 import { useDatesStore } from '@/stores/datesStore';
 import {
@@ -16,6 +17,7 @@ import {
 
 export default function CommandPalette() {
   const { open, closePalette } = useCommandPaletteStore();
+  const openCapture = useCaptureMomentStore((s) => s.openCapture);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -54,7 +56,11 @@ export default function CommandPalette() {
     { id: 'action:weekly-pulse', kind: 'action', label: "This week's pulse",
       hint: 'Who to think about', to: '/relationships',
       keywords: ['suggestion', 'sunday'] },
-  ]), []);
+    { id: 'action:capture-moment', kind: 'action', label: 'Capture a moment',
+      hint: 'Log a memory — text + optional photo',
+      run: () => openCapture(null),
+      keywords: ['memory', 'photo', 'journal', 'log'] },
+  ]), [openCapture]);
 
   const all = useMemo(
     () => buildCommands({ people, dates, actions, activePersonId }),
