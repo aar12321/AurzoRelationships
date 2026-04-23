@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // Relationship OS talks to the shared Aurzo Supabase project. Every Aurzo
 // product uses the same project URL + publishable key — that's what makes
@@ -23,7 +23,7 @@ if (!url || !anonKey) {
 // Default schema is relationship_os — every table call from this client
 // (e.g. supabase.from('people')) resolves inside that schema. For shared
 // identity / entitlements / activity, use the coreClient below.
-export const supabase: SupabaseClient = createClient(
+export const supabase = createClient(
   url ?? 'http://localhost:54321',
   anonKey ?? 'public-anon-key',
   {

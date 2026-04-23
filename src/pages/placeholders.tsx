@@ -1,112 +1,24 @@
-import ModulePlaceholder from '@/components/layout/ModulePlaceholder';
+// Route-level page exports. Most are now real modules; placeholders remain
+// only for routes the spec describes but we haven't built screens for yet.
 
 export { default as PeopleDirectory } from '@/features/people/PeopleDirectoryPage';
 export { default as AddPerson } from '@/features/people/AddPersonPage';
 export { default as PersonProfile } from '@/features/people/PersonProfilePage';
+export { default as PersonMemories } from '@/features/memories/PersonMemoriesPage';
+export { default as PersonGifts } from '@/features/gifts/PersonGiftsPage';
+export { default as PersonMessages } from '@/features/outreach/ComposerPage';
+export { default as DatesCalendar } from '@/features/dates/DatesPage';
+export { default as Health } from '@/features/health/HealthPage';
+export { default as Events } from '@/features/events/EventsPage';
+export { default as CreateEvent } from '@/features/events/CreateEventPage';
+export { default as EventDetail } from '@/features/events/EventDetailPage';
+export { default as GiftHub } from '@/features/gifts/GiftHubPage';
+export { default as MemoryLog } from '@/features/memories/MemoryLogPage';
+export { default as Couples } from '@/features/couples/CouplesPage';
+export { default as Advisor } from '@/features/advisor/AdvisorPage';
+export { default as Settings } from '@/features/settings/SettingsPage';
 
-export const PersonMemories = () => (
-  <ModulePlaceholder
-    title="Shared memories"
-    tagline="A private scrapbook of your life together."
-    invitation="Capture a memory — a dinner, a trip, a small everyday moment."
-  />
-);
-
-export const PersonGifts = () => (
-  <ModulePlaceholder
-    title="Gift ideas"
-    tagline="Never scramble for a thoughtful gift again."
-    invitation="Save an idea whenever one comes to mind."
-  />
-);
-
-export const PersonMessages = () => (
-  <ModulePlaceholder
-    title="Outreach"
-    tagline="Reach out in a way that feels genuinely personal."
-    invitation="Choose an occasion — we'll help you find the right words."
-  />
-);
-
-export const DatesCalendar = () => (
-  <ModulePlaceholder
-    title="Important dates"
-    tagline="Never miss a moment that matters to someone you love."
-    invitation="Add a birthday or anniversary — we'll remind you gently, in advance."
-  />
-);
-
-export const Health = () => (
-  <ModulePlaceholder
-    title="Relationship health"
-    tagline="A gentle, honest view of who's thriving and who's fading."
-    invitation="Log your first interaction to start seeing patterns — no scores, just warmth."
-  />
-);
-
-export const Events = () => (
-  <ModulePlaceholder
-    title="Events & gatherings"
-    tagline="From a dinner to a reunion — plan it all in one place."
-    invitation="Create your first event when you're ready."
-  />
-);
-
-export const CreateEvent = () => (
-  <ModulePlaceholder
-    title="New event"
-    tagline="Guests, tasks, budget, and day-of timeline."
-    invitation="What are you bringing people together for?"
-  />
-);
-
-export const EventDetail = () => (
-  <ModulePlaceholder
-    title="Event"
-    tagline="Everything you need in one place."
-    invitation="Open an event to see guests, tasks, and the day-of timeline."
-  />
-);
-
-export const GiftHub = () => (
-  <ModulePlaceholder
-    title="Gift hub"
-    tagline="All upcoming occasions, with ideas ready."
-    invitation="Once dates are in, upcoming gift occasions will surface here."
-  />
-);
-
-export const MemoryLog = () => (
-  <ModulePlaceholder
-    title="Memories"
-    tagline="Traditions, first times, ordinary days."
-    invitation="Add your first memory — a moment worth keeping."
-  />
-);
-
-export const Couples = () => (
-  <ModulePlaceholder
-    title="Couples"
-    tagline="A private space, just for two."
-    invitation="Connect with your partner to unlock shared timelines, check-ins, and bucket lists."
-  />
-);
-
-export const Advisor = () => (
-  <ModulePlaceholder
-    title="Advisor"
-    tagline="Warm, thoughtful guidance for the relationships in your life."
-    invitation="Ask anything — from 'what should I say?' to 'how do I reconnect?'"
-  />
-);
-
-export const Settings = () => (
-  <ModulePlaceholder
-    title="Settings"
-    tagline="Notifications, reminder lead times, theme, and privacy."
-    invitation="Everything is private by default. You control every nudge."
-  />
-);
+import ModulePlaceholder from '@/components/layout/ModulePlaceholder';
 
 export const NotFound = () => (
   <ModulePlaceholder
