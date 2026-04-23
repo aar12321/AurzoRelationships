@@ -32,6 +32,7 @@ const PAGES: { to: string; label: string; keywords?: string[] }[] = [
   { to: '/relationships',          label: 'Home',        keywords: ['dashboard', 'pulse'] },
   { to: '/relationships/today',    label: 'Today',       keywords: ['feed', 'digest', 'daily', 'inbox'] },
   { to: '/relationships/people',   label: 'People',      keywords: ['directory', 'contacts'] },
+  { to: '/relationships/map',      label: 'Map',         keywords: ['network', 'graph', 'visualize', 'circle'] },
   { to: '/relationships/dates',    label: 'Dates',       keywords: ['birthday', 'anniversary'] },
   { to: '/relationships/health',   label: 'Health',      keywords: ['strength', 'reach out'] },
   { to: '/relationships/events',   label: 'Events',      keywords: ['gatherings'] },

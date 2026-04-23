@@ -10,6 +10,7 @@ const nav = [
   { to: '/relationships',          label: 'Home' },
   { to: '/relationships/today',    label: 'Today' },
   { to: '/relationships/people',   label: 'People' },
+  { to: '/relationships/map',      label: 'Map' },
   { to: '/relationships/dates',    label: 'Dates' },
   { to: '/relationships/health',   label: 'Health' },
   { to: '/relationships/events',   label: 'Events' },
