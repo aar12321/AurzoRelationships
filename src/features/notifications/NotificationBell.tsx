@@ -31,7 +31,9 @@ export default function NotificationBell() {
         aria-label="Notifications"
         onClick={() => setOpen((o) => !o)}
         className="relative rounded-full w-9 h-9 flex items-center justify-center
-                   text-charcoal-700 hover:bg-cream-200 transition-colors"
+                   text-charcoal-700 dark:text-cream-100
+                   hover:bg-cream-200 dark:hover:bg-charcoal-700
+                   transition-colors"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
              viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -52,17 +54,17 @@ export default function NotificationBell() {
         <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto
                         card-journal z-20 animate-bloom p-0"
              style={{ padding: 0 }}>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200">
-            <div className="font-serif text-lg text-charcoal-900">Notifications</div>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-charcoal-700">
+            <div className="font-serif text-lg text-charcoal-900 dark:text-cream-50">Notifications</div>
             {unread > 0 && user && (
-              <button className="text-xs text-charcoal-500 hover:text-charcoal-900"
+              <button className="text-xs text-charcoal-500 dark:text-charcoal-300 hover:text-charcoal-900 dark:hover:text-cream-50"
                 onClick={() => void markAllRead(user.id)}>
                 Mark all read
               </button>
             )}
           </div>
           {items.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-charcoal-500">
+            <div className="px-4 py-8 text-center text-sm text-charcoal-500 dark:text-charcoal-300">
               All quiet. We'll surface gentle nudges here.
             </div>
           ) : (
@@ -72,10 +74,10 @@ export default function NotificationBell() {
               ))}
             </ul>
           )}
-          <div className="border-t border-cream-200 px-4 py-2 text-center">
+          <div className="border-t border-cream-200 dark:border-charcoal-700 px-4 py-2 text-center">
             <Link to="/relationships/notifications"
               onClick={() => setOpen(false)}
-              className="text-xs text-terracotta-700 hover:underline">
+              className="text-xs text-terracotta-700 dark:text-terracotta-300 hover:underline">
               See all
             </Link>
           </div>
