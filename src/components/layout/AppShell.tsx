@@ -2,6 +2,9 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import AppSwitcher from '@/features/notifications/AppSwitcher';
 import NotificationBell from '@/features/notifications/NotificationBell';
+import CommandPalette from '@/components/CommandPalette';
+import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
+import { useGlobalHotkeys } from '@/hooks/useGlobalHotkeys';
 
 const nav = [
   { to: '/relationships',          label: 'Home' },
@@ -18,6 +21,7 @@ const nav = [
 
 export default function AppShell() {
   const { logout, user } = useAuthStore();
+  useGlobalHotkeys();
 
   return (
     <div className="min-h-full flex flex-col md:flex-row">
@@ -62,16 +66,19 @@ export default function AppShell() {
       </aside>
 
       <div className="flex-1 flex flex-col">
-        <header className="flex justify-end items-center px-5 md:px-10 py-3
+        <header className="flex justify-end items-center gap-3 px-5 md:px-10 py-3
                            border-b border-cream-200 bg-cream-50/60
                            md:sticky md:top-0 z-10 backdrop-blur
                            dark:border-charcoal-700 dark:bg-charcoal-950/70">
+          <CommandPaletteTrigger />
           <NotificationBell />
         </header>
         <main className="flex-1 px-5 md:px-10 py-8 max-w-5xl w-full mx-auto">
           <Outlet />
         </main>
       </div>
+
+      <CommandPalette />
     </div>
   );
 }
