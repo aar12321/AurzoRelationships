@@ -5,7 +5,7 @@ import { usePeopleStore } from '@/stores/peopleStore';
 import {
   createThread, listMessages, listThreads, localAdvise, postMessage,
 } from '@/services/advisorService';
-import { aiAdvise } from '@/services/aiService';
+import { aiAdviseStream } from '@/services/aiService';
 import { SUGGESTED_PROMPTS } from '@/types/advisor';
 import type { AdvisorMessage, AdvisorThread } from '@/types/advisor';
 
@@ -20,6 +20,7 @@ export default function AdvisorPage() {
   const [messages, setMessages] = useState<AdvisorMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,15 +52,21 @@ export default function AdvisorPage() {
       }
       const userMsg = await postMessage(t.id, user.id, 'user', text.trim());
       setMessages((m) => [...m, userMsg]);
-      let reply: string;
+      setInput('');
+      setStreamingText('');
+
+      let reply = '';
       try {
-        reply = await aiAdvise(text, people, dates);
+        reply = await aiAdviseStream(text, people, dates, (chunk) => {
+          setStreamingText((prev) => prev + chunk);
+        });
       } catch {
         reply = localAdvise(text, people, dates);
       }
+      setStreamingText('');
+      if (!reply.trim()) reply = localAdvise(text, people, dates);
       const asstMsg = await postMessage(t.id, user.id, 'assistant', reply);
       setMessages((m) => [...m, asstMsg]);
-      setInput('');
     } finally {
       setBusy(false);
     }
@@ -108,7 +115,19 @@ export default function AdvisorPage() {
               </div>
             ))
           )}
-          {busy && (
+          {streamingText && (
+            <div>
+              <div className="inline-block max-w-[80%] rounded-journal px-3 py-2
+                              bg-cream-100 text-charcoal-900">
+                <pre className="whitespace-pre-wrap font-sans text-sm">
+                  {streamingText}
+                  <span className="inline-block w-2 h-4 bg-terracotta-500
+                                   align-middle animate-pulse ml-0.5" />
+                </pre>
+              </div>
+            </div>
+          )}
+          {busy && !streamingText && (
             <div className="text-charcoal-500 text-xs">Thinking…</div>
           )}
         </div>

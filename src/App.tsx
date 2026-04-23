@@ -22,6 +22,7 @@ import {
   PersonProfile,
   Settings,
 } from '@/pages/placeholders';
+import NotificationsPage from '@/features/notifications/NotificationsPage';
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="couples" element={<Couples />} />
         <Route path="advisor" element={<Advisor />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import AppSwitcher from '@/features/notifications/AppSwitcher';
+import NotificationBell from '@/features/notifications/NotificationBell';
 
 const nav = [
   { to: '/relationships',          label: 'Home' },
@@ -21,11 +23,10 @@ export default function AppShell() {
     <div className="min-h-full flex flex-col md:flex-row">
       <aside
         className="md:w-60 md:min-h-screen md:border-r border-cream-200
-                   bg-cream-100 md:sticky md:top-0"
+                   bg-cream-100 md:sticky md:top-0 flex flex-col"
       >
-        <div className="px-5 py-6">
-          <div className="font-serif text-2xl text-charcoal-900">Aurzo</div>
-          <div className="text-xs text-charcoal-500">Relationship OS</div>
+        <div className="px-3 py-5 flex items-center justify-between md:block">
+          <AppSwitcher />
         </div>
 
         <nav
@@ -59,9 +60,16 @@ export default function AppShell() {
         </div>
       </aside>
 
-      <main className="flex-1 px-5 md:px-10 py-8 max-w-5xl w-full mx-auto">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col">
+        <header className="flex justify-end items-center px-5 md:px-10 py-3
+                           border-b border-cream-200 bg-cream-50/60
+                           md:sticky md:top-0 z-10 backdrop-blur">
+          <NotificationBell />
+        </header>
+        <main className="flex-1 px-5 md:px-10 py-8 max-w-5xl w-full mx-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

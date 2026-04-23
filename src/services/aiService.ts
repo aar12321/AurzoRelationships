@@ -3,6 +3,13 @@ import type { Person } from '@/types/people';
 import type { ImportantDate } from '@/types/dates';
 import { daysUntil } from '@/types/dates';
 
+const SUPABASE_URL =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
+  (import.meta.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined) ?? '';
+const SUPABASE_KEY =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  (import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined) ?? '';
+
 // Client-side SDK wrapper for the aurzo-ai edge function. All Claude calls
 // go through the function — the API key never reaches the browser.
 
@@ -95,4 +102,61 @@ export async function aiWeeklyPulse(
     people: people.map(personCtx),
     dates: dates.map(dateCtx),
   });
+}
+
+export async function aiSurfacePulse(
+  people: Person[],
+  dates: ImportantDate[],
+): Promise<{ created: boolean }> {
+  return invoke<{ created: boolean }>({
+    action: 'surface_pulse',
+    people: people.map(personCtx),
+    dates: dates.map(dateCtx),
+  });
+}
+
+// Streaming advise — uses fetch directly so we can consume the response body
+// chunk-by-chunk. onChunk fires for every decoded text fragment as it arrives.
+export async function aiAdviseStream(
+  question: string,
+  people: Person[],
+  dates: ImportantDate[],
+  onChunk: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/aurzo-ai`, {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${session?.access_token ?? SUPABASE_KEY}`,
+    },
+    body: JSON.stringify({
+      action: 'advise',
+      question,
+      stream: true,
+      people: people.map(personCtx),
+      dates: dates.map(dateCtx),
+    }),
+  });
+  if (!resp.ok || !resp.body) {
+    throw new Error(`AI stream failed: ${resp.status}`);
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const text = decoder.decode(value, { stream: true });
+    if (text) {
+      full += text;
+      onChunk(text);
+    }
+  }
+  const tail = decoder.decode();
+  if (tail) { full += tail; onChunk(tail); }
+  return full;
 }

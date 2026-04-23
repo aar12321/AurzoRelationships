@@ -32,11 +32,12 @@ Rules you always follow:
 - When the user is in pain, sit with it briefly before offering anything actionable.`;
 
 type Action =
-  | { action: 'advise'; question: string; people?: PersonCtx[]; dates?: DateCtx[] }
+  | { action: 'advise'; question: string; people?: PersonCtx[]; dates?: DateCtx[]; stream?: boolean }
   | { action: 'compose'; person: PersonCtx; occasion: string; tone: string; channel: string }
   | { action: 'gift_ideas'; person: PersonCtx; budget?: number; occasion?: string }
   | { action: 'date_ideas'; shared_interests?: string[]; budget?: string; location?: string }
-  | { action: 'weekly_pulse'; people: PersonCtx[]; dates?: DateCtx[] };
+  | { action: 'weekly_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
+  | { action: 'surface_pulse'; people: PersonCtx[]; dates?: DateCtx[] };
 
 type PersonCtx = {
   full_name: string;
@@ -65,6 +66,14 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: 'unauthorized' }, 401, cors);
 
     const body: Action = await req.json();
+
+    if (body.action === 'advise' && body.stream) {
+      return streamAdvise(body, cors);
+    }
+    if (body.action === 'surface_pulse') {
+      return json(await surfacePulse(body, user.id, supa), 200, cors);
+    }
+
     const result = await handle(body);
     return json(result, 200, cors);
   } catch (e) {
@@ -80,7 +89,97 @@ async function handle(body: Action): Promise<unknown> {
     case 'compose':      return compose(body);
     case 'advise':       return advise(body);
     case 'weekly_pulse': return weeklyPulse(body);
+    case 'surface_pulse':
+      throw new Error('surface_pulse handled inline');
   }
+}
+
+// Streaming advise — emits raw text chunks over a chunked HTTP response.
+// Client reads with ReadableStream and appends to the UI as chunks arrive.
+function streamAdvise(
+  b: Extract<Action, { action: 'advise' }>,
+  cors: Record<string, string>,
+): Response {
+  const userMsg = buildAdviseUserMsg(b);
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      try {
+        const resp = anthropic.messages.stream({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 600,
+          system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+          messages: [{ role: 'user', content: userMsg }],
+        });
+        for await (const event of resp) {
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            controller.enqueue(encoder.encode(event.delta.text));
+          }
+        }
+        controller.close();
+      } catch (e) {
+        controller.enqueue(encoder.encode(
+          '\n[AI error: ' + (e instanceof Error ? e.message : 'unknown') + ']',
+        ));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', ...cors },
+  });
+}
+
+// surface_pulse — generates the Sunday pulse and writes it as an
+// aurzo_core.notification for the requesting user. The client can render it
+// immediately; a future pg_cron job will call the same action for all users.
+async function surfacePulse(
+  b: Extract<Action, { action: 'surface_pulse' }>,
+  userId: string,
+  supa: ReturnType<typeof createClient>,
+): Promise<unknown> {
+  const pulse = await weeklyPulse({ ...b, action: 'weekly_pulse' } as unknown as Extract<Action, { action: 'weekly_pulse' }>) as {
+    person_name: string; message: string; suggested_action?: string;
+  };
+
+  if (!pulse || !pulse.message) return { created: false };
+
+  const { data, error } = await supa
+    .schema('aurzo_core')
+    .from('notifications')
+    .insert({
+      user_id: userId,
+      app_id: 'relationship_os',
+      title: `Thinking of ${pulse.person_name}`,
+      body: pulse.message + (pulse.suggested_action ? '\n\n→ ' + pulse.suggested_action : ''),
+      category: 'weekly_pulse',
+      priority: 'normal',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return { created: true, notification: data };
+}
+
+function buildAdviseUserMsg(b: Extract<Action, { action: 'advise' }>): string {
+  const ctx = (b.people ?? []).slice(0, 30).map((p) => {
+    const last = p.last_contacted_at ? ` — last contact ${p.last_contacted_at.slice(0, 10)}` : '';
+    return `- ${p.full_name} (${p.relationship_type ?? 'friend'})${last}${p.notes ? '. Notes: ' + p.notes.slice(0, 140) : ''}`;
+  }).join('\n');
+  const dates = (b.dates ?? []).slice(0, 10).map((d) =>
+    `- ${d.label} (${d.event_date}${d.days_until != null ? `, in ${d.days_until}d` : ''})`,
+  ).join('\n');
+  return `The user asked: "${b.question}"
+
+Their people:
+${ctx || '(no people yet)'}
+
+Upcoming dates:
+${dates || '(none)'}
+
+Respond in plain prose. 2-5 sentences. Reference specific people or dates when it helps.`;
 }
 
 // ---------- cheap actions (Haiku 4.5) ----------
@@ -199,24 +298,7 @@ STRICT JSON.`;
 }
 
 async function advise(b: Extract<Action, { action: 'advise' }>) {
-  const ctx = (b.people ?? []).slice(0, 30).map((p) => {
-    const last = p.last_contacted_at ? ` — last contact ${p.last_contacted_at.slice(0, 10)}` : '';
-    return `- ${p.full_name} (${p.relationship_type ?? 'friend'})${last}${p.notes ? '. Notes: ' + p.notes.slice(0, 140) : ''}`;
-  }).join('\n');
-  const dates = (b.dates ?? []).slice(0, 10).map((d) =>
-    `- ${d.label} (${d.event_date}${d.days_until != null ? `, in ${d.days_until}d` : ''})`,
-  ).join('\n');
-
-  const userMsg = `The user asked: "${b.question}"
-
-Their people:
-${ctx || '(no people yet)'}
-
-Upcoming dates:
-${dates || '(none)'}
-
-Respond in plain prose. 2-5 sentences. Reference specific people or dates when it helps.`;
-
+  const userMsg = buildAdviseUserMsg(b);
   const resp = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 600,

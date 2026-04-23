@@ -1,9 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useDatesStore } from '@/stores/datesStore';
 import { useInteractionsStore } from '@/stores/interactionsStore';
 import { usePeopleStore } from '@/stores/peopleStore';
+import { useNotificationsStore } from '@/stores/notificationsStore';
+import { aiSurfacePulse } from '@/services/aiService';
 import { upcomingWithin } from '@/services/datesService';
 import { computeStrength } from '@/services/interactionsService';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
@@ -15,7 +17,25 @@ export default function Dashboard() {
   const { people, loadAll: loadPeople } = usePeopleStore();
   const { dates, load: loadDates } = useDatesStore();
   const { interactions, load: loadIx } = useInteractionsStore();
+  const loadNotifs = useNotificationsStore((s) => s.load);
   const name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'friend';
+  const [pulseBusy, setPulseBusy] = useState(false);
+  const [pulseMsg, setPulseMsg] = useState<string | null>(null);
+
+  async function surfacePulse() {
+    if (pulseBusy) return;
+    setPulseBusy(true); setPulseMsg(null);
+    try {
+      await aiSurfacePulse(people, dates);
+      await loadNotifs();
+      setPulseMsg('Pulse delivered — check your bell.');
+    } catch (e) {
+      setPulseMsg(e instanceof Error ? e.message : 'Could not generate pulse');
+    } finally {
+      setPulseBusy(false);
+      setTimeout(() => setPulseMsg(null), 4000);
+    }
+  }
 
   useEffect(() => {
     if (people.length === 0) void loadPeople();
@@ -98,15 +118,31 @@ export default function Dashboard() {
                 <PersonAvatar name={pulse.full_name} photoUrl={pulse.photo_url} size="sm" pulse />
                 <span className="font-serif text-lg">{pulse.full_name}</span>
               </Link>
-              <Link to={`/relationships/people/${pulse.id}/messages`}
-                className="btn-primary mt-3 inline-flex text-xs">
-                Draft a message
-              </Link>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Link to={`/relationships/people/${pulse.id}/messages`}
+                  className="btn-primary text-xs">
+                  Draft a message
+                </Link>
+                <button onClick={() => void surfacePulse()} disabled={pulseBusy}
+                  className="btn-ghost text-xs border border-cream-200">
+                  {pulseBusy ? 'Thinking…' : 'Ask Claude for a pulse'}
+                </button>
+              </div>
+              {pulseMsg && <p className="text-xs text-gold-700 mt-2">{pulseMsg}</p>}
             </div>
           ) : (
-            <p className="text-charcoal-700">
-              On Sunday mornings, one person worth nurturing will surface here.
-            </p>
+            <>
+              <p className="text-charcoal-700">
+                On Sunday mornings, one person worth nurturing will surface here.
+              </p>
+              {people.length > 0 && (
+                <button onClick={() => void surfacePulse()} disabled={pulseBusy}
+                  className="btn-primary text-xs mt-3">
+                  {pulseBusy ? 'Thinking…' : 'Generate pulse now'}
+                </button>
+              )}
+              {pulseMsg && <p className="text-xs text-gold-700 mt-2">{pulseMsg}</p>}
+            </>
           )}
         </Card>
       </div>
