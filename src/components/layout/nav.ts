@@ -19,6 +19,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/relationships/map',      label: 'Map',       primary: true, icon: '🗺️' },
   { to: '/relationships/dates',    label: 'Dates',     icon: '📅' },
   { to: '/relationships/health',   label: 'Health',    icon: '💗' },
+  { to: '/relationships/forecast', label: 'Forecast',  icon: '📈' },
   { to: '/relationships/events',   label: 'Events',    icon: '🎉' },
   { to: '/relationships/gifts',    label: 'Gifts',     icon: '🎁' },
   { to: '/relationships/memories', label: 'Memories',  icon: '📸' },

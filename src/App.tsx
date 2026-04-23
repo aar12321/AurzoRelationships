@@ -25,6 +25,7 @@ import {
 import NotificationsPage from '@/features/notifications/NotificationsPage';
 import TodayPage from '@/features/today/TodayPage';
 import RelationshipMapPage from '@/features/map/RelationshipMapPage';
+import ForecastPage from '@/features/health/ForecastPage';
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
         <Route path="people/:id/messages" element={<PersonMessages />} />
         <Route path="dates" element={<DatesCalendar />} />
         <Route path="health" element={<Health />} />
+        <Route path="forecast" element={<ForecastPage />} />
         <Route path="events" element={<Events />} />
         <Route path="events/new" element={<CreateEvent />} />
         <Route path="events/:id" element={<EventDetail />} />
