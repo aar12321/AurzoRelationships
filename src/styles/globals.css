@@ -9,38 +9,68 @@
     height: 100%;
   }
 
+  html {
+    transition: background-color 250ms ease, color 250ms ease;
+  }
+
   body {
     @apply bg-cream-50 text-charcoal-700 font-sans antialiased;
+    @apply dark:bg-charcoal-950 dark:text-cream-100;
     font-feature-settings: 'ss01', 'cv02';
   }
 
   h1,
   h2,
   h3 {
-    @apply font-serif text-charcoal-900;
+    @apply font-serif text-charcoal-900 dark:text-cream-50;
     letter-spacing: -0.01em;
+  }
+
+  hr {
+    @apply border-cream-200 dark:border-charcoal-700;
+  }
+
+  /* Subtle form control theming for dark mode — inputs/selects/textarea default
+     to cream surfaces; in dark mode we lift them onto charcoal-800 with soft
+     borders so they don't glow white. */
+  input,
+  select,
+  textarea {
+    @apply dark:bg-charcoal-800 dark:text-cream-50 dark:border-charcoal-700
+           dark:placeholder:text-charcoal-300;
+  }
+
+  ::selection {
+    @apply bg-terracotta-300 text-charcoal-900;
+  }
+  .dark ::selection {
+    @apply bg-terracotta-700 text-cream-50;
   }
 }
 
 @layer components {
   .card-journal {
     @apply bg-ivory-50 rounded-journal shadow-warm border border-cream-200 p-5;
+    @apply dark:bg-charcoal-800 dark:border-charcoal-700 dark:shadow-warm-dark;
   }
 
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-journal bg-terracotta-600
            px-4 py-2 text-sm font-medium text-ivory-50 shadow-warm
-           hover:bg-terracotta-700 transition-colors;
+           hover:bg-terracotta-700 transition-colors
+           dark:bg-terracotta-500 dark:hover:bg-terracotta-600 dark:shadow-warm-dark;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center rounded-journal
            px-3 py-2 text-sm text-charcoal-700 hover:bg-cream-100
-           transition-colors;
+           transition-colors
+           dark:text-cream-100 dark:hover:bg-charcoal-700;
   }
 
   .chip {
     @apply inline-flex items-center rounded-full border border-cream-200
            bg-ivory-50 px-3 py-1 text-xs text-charcoal-500;
+    @apply dark:border-charcoal-700 dark:bg-charcoal-800 dark:text-cream-100;
   }
 }

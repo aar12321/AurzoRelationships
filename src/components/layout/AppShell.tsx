@@ -23,7 +23,8 @@ export default function AppShell() {
     <div className="min-h-full flex flex-col md:flex-row">
       <aside
         className="md:w-60 md:min-h-screen md:border-r border-cream-200
-                   bg-cream-100 md:sticky md:top-0 flex flex-col"
+                   bg-cream-100 md:sticky md:top-0 flex flex-col
+                   dark:bg-charcoal-900 dark:border-charcoal-700"
       >
         <div className="px-3 py-5 flex items-center justify-between md:block">
           <AppSwitcher />
@@ -42,8 +43,8 @@ export default function AppShell() {
                 [
                   'whitespace-nowrap rounded-journal px-3 py-2 text-sm transition-colors',
                   isActive
-                    ? 'bg-terracotta-600 text-ivory-50'
-                    : 'text-charcoal-700 hover:bg-cream-200',
+                    ? 'bg-terracotta-600 text-ivory-50 dark:bg-terracotta-500'
+                    : 'text-charcoal-700 hover:bg-cream-200 dark:text-cream-100 dark:hover:bg-charcoal-800',
                 ].join(' ')
               }
             >
@@ -52,7 +53,7 @@ export default function AppShell() {
           ))}
         </nav>
 
-        <div className="hidden md:block mt-auto px-5 py-4 text-xs text-charcoal-500">
+        <div className="hidden md:block mt-auto px-5 py-4 text-xs text-charcoal-500 dark:text-charcoal-300">
           <div className="mb-2 truncate">{user?.email}</div>
           <button onClick={() => void logout()} className="btn-ghost w-full justify-start">
             Sign out
@@ -63,7 +64,8 @@ export default function AppShell() {
       <div className="flex-1 flex flex-col">
         <header className="flex justify-end items-center px-5 md:px-10 py-3
                            border-b border-cream-200 bg-cream-50/60
-                           md:sticky md:top-0 z-10 backdrop-blur">
+                           md:sticky md:top-0 z-10 backdrop-blur
+                           dark:border-charcoal-700 dark:bg-charcoal-950/70">
           <NotificationBell />
         </header>
         <main className="flex-1 px-5 md:px-10 py-8 max-w-5xl w-full mx-auto">

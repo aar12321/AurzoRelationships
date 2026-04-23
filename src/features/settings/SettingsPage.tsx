@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { getMyProfile, listApps, updateMyProfile } from '@/services/coreService';
+import { setTheme } from '@/services/themeService';
 import type { AurzoApp, AurzoProfile } from '@/types/core';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
 
@@ -13,7 +14,10 @@ export default function SettingsPage() {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    void getMyProfile().then(setProfile);
+    void getMyProfile().then((p) => {
+      setProfile(p);
+      if (p?.theme) setTheme(p.theme);
+    });
     void listApps().then(setApps);
   }, []);
 
@@ -23,6 +27,7 @@ export default function SettingsPage() {
     try {
       const next = await updateMyProfile({ [key]: value } as Partial<AurzoProfile>, user.id);
       setProfile(next);
+      if (key === 'theme') setTheme(value as 'light' | 'dark' | 'auto');
       setMsg('Saved');
       setTimeout(() => setMsg(null), 1200);
     } finally { setSaving(false); }

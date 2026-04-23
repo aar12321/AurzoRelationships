@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -25,9 +26,12 @@ export default {
           700: '#9a7838',
         },
         charcoal: {
+          300: '#8a7d72',
           500: '#5a4f46',
           700: '#3f3730',
+          800: '#322b25',
           900: '#2a2520',
+          950: '#1c1814',
         },
       },
       fontFamily: {
@@ -36,6 +40,7 @@ export default {
       },
       boxShadow: {
         warm: '0 1px 3px rgba(143, 76, 47, 0.08), 0 6px 24px rgba(143, 76, 47, 0.06)',
+        'warm-dark': '0 1px 3px rgba(0, 0, 0, 0.35), 0 6px 24px rgba(0, 0, 0, 0.25)',
       },
       borderRadius: {
         journal: '14px',
