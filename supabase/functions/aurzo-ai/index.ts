@@ -12,6 +12,7 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.60.0';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { dailyNudges } from './nudges.ts';
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY')! });
 
@@ -38,7 +39,8 @@ type Action =
   | { action: 'date_ideas'; shared_interests?: string[]; budget?: string; location?: string }
   | { action: 'weekly_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
   | { action: 'surface_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
-  | { action: 'cron_pulse'; target_user_id: string };
+  | { action: 'cron_pulse'; target_user_id: string }
+  | { action: 'daily_nudges'; target_user_id: string };
 
 type PersonCtx = {
   full_name: string;
@@ -63,14 +65,17 @@ Deno.serve(async (req) => {
     // Service-role path: pg_cron dispatches with the service key. No end-user
     // JWT is involved, so we authenticate by comparing the bearer against the
     // injected SUPABASE_SERVICE_ROLE_KEY.
-    if (body.action === 'cron_pulse') {
+    if (body.action === 'cron_pulse' || body.action === 'daily_nudges') {
       const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const bearer = authHeader.replace(/^Bearer\s+/i, '');
       if (!serviceKey || bearer !== serviceKey) {
-        return json({ error: 'cron_pulse requires service role' }, 403, cors);
+        return json({ error: body.action + ' requires service role' }, 403, cors);
       }
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
-      return json(await cronPulse(body, admin), 200, cors);
+      if (body.action === 'cron_pulse') {
+        return json(await cronPulse(body, admin), 200, cors);
+      }
+      return json(await dailyNudges(body.target_user_id, anthropic, admin), 200, cors);
     }
 
     const supa = createClient(
@@ -105,6 +110,7 @@ async function handle(body: Action): Promise<unknown> {
     case 'weekly_pulse': return weeklyPulse(body);
     case 'surface_pulse':
     case 'cron_pulse':
+    case 'daily_nudges':
       throw new Error(body.action + ' handled inline');
   }
 }
@@ -175,9 +181,8 @@ async function cronPulse(
   const { data: people, error: pErr } = await admin
     .schema('relationship_os')
     .from('people')
-    .select('full_name, relationship_type, notes, interests, life_context, last_contacted_at, deleted_at')
-    .eq('user_id', userId)
-    .is('deleted_at', null)
+    .select('full_name, relationship_type, notes, life_context, last_contacted_at')
+    .eq('owner_id', userId)
     .limit(40);
   if (pErr) throw pErr;
   if (!people || people.length === 0) return { skipped: 'no_people' };
@@ -188,7 +193,7 @@ async function cronPulse(
     .schema('relationship_os')
     .from('important_dates')
     .select('label, event_date')
-    .eq('user_id', userId)
+    .eq('owner_id', userId)
     .lte('event_date', horizon.toISOString().slice(0, 10))
     .order('event_date', { ascending: true })
     .limit(10);
@@ -200,7 +205,6 @@ async function cronPulse(
         full_name: p.full_name as string,
         relationship_type: p.relationship_type as string | null,
         notes: p.notes as string | null,
-        interests: p.interests as string | null,
         life_context: p.life_context as Record<string, unknown> | null,
         last_contacted_at: p.last_contacted_at as string | null,
       })),
