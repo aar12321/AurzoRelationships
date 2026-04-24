@@ -10,8 +10,9 @@ import {
   setGroupMembership,
   updatePerson,
 } from '@/services/peopleService';
-import { createDate } from '@/services/datesService';
+import { createDate, syncPersonBirthday } from '@/services/datesService';
 import { useDatesStore } from '@/stores/datesStore';
+import { useAuthStore } from '@/stores/authStore';
 
 type State = {
   people: Person[];
@@ -90,10 +91,43 @@ export const usePeopleStore = create<State>((set, get) => ({
   },
 
   update: async (id, patch) => {
+    // Capture the prior birthday before the row changes so we can diff it.
+    const prev = get().people.find((p) => p.id === id) ?? null;
     const updated = await updatePerson(id, patch);
     set({
       people: get().people.map((p) => (p.id === id ? updated : p)).sort(byName),
     });
+
+    // Keep the birthday important_date in sync when the patch touched it.
+    // Without this, editing someone's birthday would leave the reminder
+    // pointing at the old date — the classic "silent data drift" a
+    // high-end app can't afford.
+    const ownerId = useAuthStore.getState().user?.id;
+    if (ownerId && prev && 'birthday' in patch) {
+      const nextBirthday = patch.birthday ?? null;
+      if (prev.birthday !== nextBirthday) {
+        try {
+          const firstName = updated.full_name.split(/\s+/)[0] ?? updated.full_name;
+          const result = await syncPersonBirthday({
+            personId: id,
+            prevBirthday: prev.birthday ?? null,
+            nextBirthday,
+            firstName,
+            ownerId,
+          });
+          // Reconcile the datesStore cache with the write that happened.
+          useDatesStore.setState((s) => {
+            if (result.kind === 'inserted') return { dates: [...s.dates, result.date] };
+            if (result.kind === 'updated')  return { dates: s.dates.map((d) => d.id === result.date.id ? result.date : d) };
+            if (result.kind === 'deleted')  return { dates: s.dates.filter((d) => d.id !== result.id) };
+            return s;
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('[peopleStore] birthday sync on update failed:', err);
+        }
+      }
+    }
   },
 
   remove: async (id) => {
