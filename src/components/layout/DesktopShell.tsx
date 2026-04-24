@@ -1,12 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/features/auth/AuthProvider';
 import AppSwitcher from '@/features/notifications/AppSwitcher';
 import NotificationBell from '@/features/notifications/NotificationBell';
 import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
 import { NAV_ITEMS } from './nav';
 
 export default function DesktopShell() {
-  const { logout, user } = useAuthStore();
+  const { signOut, user } = useAuth();
 
   return (
     <div className="min-h-full flex flex-row">
@@ -42,7 +42,7 @@ export default function DesktopShell() {
 
         <div className="mt-auto px-5 py-4 text-xs text-charcoal-500 dark:text-charcoal-300">
           <div className="mb-2 truncate">{user?.email}</div>
-          <button onClick={() => void logout()} className="btn-ghost w-full justify-start">
+          <button onClick={() => void signOut()} className="btn-ghost w-full justify-start">
             Sign out
           </button>
         </div>

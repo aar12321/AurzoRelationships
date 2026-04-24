@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from '@/features/auth/LoginPage';
 import RequireAuth from '@/features/auth/RequireAuth';
+import { AuthProvider } from '@/features/auth/AuthProvider';
 import AppShell from '@/components/layout/AppShell';
 import SetupRequired from '@/components/SetupRequired';
 import TitleWatcher from '@/components/TitleWatcher';
@@ -33,7 +34,7 @@ import ForecastPage from '@/features/health/ForecastPage';
 export default function App() {
   if (!supabaseConfigured) return <SetupRequired />;
   return (
-    <>
+    <AuthProvider>
       <TitleWatcher />
       <Routes>
       <Route path="/" element={<Navigate to="/relationships" replace />} />
@@ -74,6 +75,6 @@ export default function App() {
 
       <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
+    </AuthProvider>
   );
 }

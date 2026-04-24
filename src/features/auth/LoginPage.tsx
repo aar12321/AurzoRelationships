@@ -2,17 +2,17 @@
 // signups live exclusively on aurzo.com per the platform spec. A session
 // that vanishes mid-use is sent here with ?expired=1 so we can explain.
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { sendPasswordReset, signInWithPassword } from '@/services/auth';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 type LocState = { from?: { pathname?: string } };
 
 export default function LoginPage() {
   useDocumentTitle('Sign in');
-  const { session, loading, initialize } = useAuthStore();
+  const { session, loading } = useAuth();
   const location = useLocation();
   const [params] = useSearchParams();
   const from = (location.state as LocState | null)?.from?.pathname ?? '/relationships';
@@ -26,12 +26,6 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    void initialize().then((fn) => { cleanup = fn; });
-    return () => cleanup?.();
-  }, [initialize]);
 
   if (!loading && session) return <Navigate to={from} replace />;
 

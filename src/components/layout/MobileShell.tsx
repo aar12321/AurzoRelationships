@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/features/auth/AuthProvider';
 import AppSwitcher from '@/features/notifications/AppSwitcher';
 import NotificationBell from '@/features/notifications/NotificationBell';
 import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
@@ -17,7 +17,7 @@ const PRIMARY: NavItem[] = NAV_ITEMS.filter((n) => n.primary);
 const SECONDARY: NavItem[] = NAV_ITEMS.filter((n) => !n.primary);
 
 export default function MobileShell() {
-  const { logout, user } = useAuthStore();
+  const { signOut, user } = useAuth();
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -88,7 +88,7 @@ export default function MobileShell() {
         <MoreDrawer
           onClose={() => setMoreOpen(false)}
           email={user?.email ?? null}
-          onSignOut={() => { void logout(); }}
+          onSignOut={() => { void signOut(); }}
         />
       )}
     </div>

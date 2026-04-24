@@ -1,19 +1,14 @@
-import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/features/auth/AuthProvider';
 
 type Props = { children: React.ReactNode };
 
 export default function RequireAuth({ children }: Props) {
-  const { session, loading, initialize } = useAuthStore();
+  const { session, loading } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    void initialize().then((fn) => { cleanup = fn; });
-    return () => cleanup?.();
-  }, [initialize]);
-
+  // Full-screen loader during the initial session check — prevents the
+  // "flash of protected content" the AurzoMorning spec warns about.
   if (loading) return <AuthLoadingScreen />;
   if (!session) return <Navigate to="/login" replace state={{ from: location }} />;
   return <>{children}</>;
