@@ -64,6 +64,10 @@ export default function ProfileHeader({ person }: Props) {
         <Link to={`/relationships/people/${person.id}/memories`} className="btn-ghost border border-cream-200 dark:border-charcoal-700">
           Memories
         </Link>
+        <Link to={`/relationships/people/${person.id}/edit`}
+              className="btn-ghost border border-cream-200 dark:border-charcoal-700 ml-auto">
+          Edit
+        </Link>
       </nav>
     </header>
   );

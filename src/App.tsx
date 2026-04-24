@@ -18,6 +18,7 @@ const TodayPage          = lazy(() => import('@/features/today/TodayPage'));
 const RelationshipMapPage = lazy(() => import('@/features/map/RelationshipMapPage'));
 const PeopleDirectory    = lazy(() => import('@/features/people/PeopleDirectoryPage'));
 const AddPerson          = lazy(() => import('@/features/people/AddPersonPage'));
+const EditPerson         = lazy(() => import('@/features/people/EditPersonPage'));
 const PersonProfile      = lazy(() => import('@/features/people/PersonProfilePage'));
 const PersonMemories     = lazy(() => import('@/features/memories/PersonMemoriesPage'));
 const PersonGifts        = lazy(() => import('@/features/gifts/PersonGiftsPage'));
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="people" element={<PeopleDirectory />} />
             <Route path="people/new" element={<AddPerson />} />
             <Route path="people/:id" element={<PersonProfile />} />
+            <Route path="people/:id/edit" element={<EditPerson />} />
             <Route path="people/:id/memories" element={<PersonMemories />} />
             <Route path="people/:id/gifts" element={<PersonGifts />} />
             <Route path="people/:id/messages" element={<PersonMessages />} />
