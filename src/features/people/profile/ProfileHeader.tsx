@@ -4,6 +4,7 @@ import { RELATIONSHIP_TYPE_LABELS } from '@/types/people';
 import { deriveStrength } from '@/services/peopleService';
 import PersonAvatar from '../PersonAvatar';
 import StrengthDot from '../StrengthDot';
+import QuickLogButton from './QuickLogButton';
 
 type Props = { person: Person };
 
@@ -38,14 +39,18 @@ export default function ProfileHeader({ person }: Props) {
         </div>
       </div>
 
-      <nav className="mt-5 flex flex-wrap gap-2">
-        <Link to={`/relationships/people/${person.id}/messages`} className="btn-ghost border border-cream-200">
+      <nav className="mt-5 flex flex-wrap gap-2 items-center">
+        <QuickLogButton
+          personId={person.id}
+          firstName={person.full_name.split(/\s+/)[0] ?? person.full_name}
+        />
+        <Link to={`/relationships/people/${person.id}/messages`} className="btn-ghost border border-cream-200 dark:border-charcoal-700">
           Compose
         </Link>
-        <Link to={`/relationships/people/${person.id}/gifts`} className="btn-ghost border border-cream-200">
+        <Link to={`/relationships/people/${person.id}/gifts`} className="btn-ghost border border-cream-200 dark:border-charcoal-700">
           Gift ideas
         </Link>
-        <Link to={`/relationships/people/${person.id}/memories`} className="btn-ghost border border-cream-200">
+        <Link to={`/relationships/people/${person.id}/memories`} className="btn-ghost border border-cream-200 dark:border-charcoal-700">
           Memories
         </Link>
       </nav>
