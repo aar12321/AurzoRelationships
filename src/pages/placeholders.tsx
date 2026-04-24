@@ -18,12 +18,4 @@ export { default as Couples } from '@/features/couples/CouplesPage';
 export { default as Advisor } from '@/features/advisor/AdvisorPage';
 export { default as Settings } from '@/features/settings/SettingsPage';
 
-import ModulePlaceholder from '@/components/layout/ModulePlaceholder';
-
-export const NotFound = () => (
-  <ModulePlaceholder
-    title="Not found"
-    tagline="This page wandered off."
-    invitation="Head back to the dashboard — the people are waiting."
-  />
-);
+export { default as NotFound } from '@/pages/NotFoundPage';
