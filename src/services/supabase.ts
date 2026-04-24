@@ -13,10 +13,16 @@ const anonKey =
   (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
   (import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined);
 
-if (!url || !anonKey) {
-  console.warn(
-    '[aurzo] Supabase env vars missing. Copy .env.example to .env and fill in ' +
-      'VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (or the NEXT_PUBLIC_* equivalents).',
+// Consumed by <SetupRequired /> to show a full-screen helper instead of the
+// app when the bundle was compiled without real Supabase credentials.
+export const supabaseConfigured = Boolean(url && anonKey);
+
+if (!supabaseConfigured) {
+  // eslint-disable-next-line no-console
+  console.error(
+    '[aurzo] Supabase env vars missing at build time. The app will render ' +
+      'a setup screen until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY ' +
+      'are provided (Replit: Secrets panel · local: .env).',
   );
 }
 

@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import SignInPage from '@/features/auth/SignInPage';
 import RequireAuth from '@/features/auth/RequireAuth';
 import AppShell from '@/components/layout/AppShell';
+import SetupRequired from '@/components/SetupRequired';
+import { supabaseConfigured } from '@/services/supabase';
 import Dashboard from '@/pages/Dashboard';
 import {
   AddPerson,
@@ -28,6 +30,7 @@ import RelationshipMapPage from '@/features/map/RelationshipMapPage';
 import ForecastPage from '@/features/health/ForecastPage';
 
 export default function App() {
+  if (!supabaseConfigured) return <SetupRequired />;
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/relationships" replace />} />
