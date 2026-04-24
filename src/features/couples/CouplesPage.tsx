@@ -6,6 +6,7 @@ import {
 } from '@/services/couplesService';
 import type { BucketItem, CoupleCheckin, PartnerLink } from '@/types/couples';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
+import { toast } from '@/stores/toastStore';
 
 export default function CouplesPage() {
   const { user } = useAuthStore();
@@ -104,6 +105,8 @@ function ActiveCouple({ link }: { link: PartnerLink }) {
   const [score, setScore] = useState(7);
   const [appreciation, setAppreciation] = useState('');
   const [newItem, setNewItem] = useState('');
+  const [aiIdeas, setAiIdeas] = useState<{ title: string; why: string; cost: string }[] | null>(null);
+  const [brainstorming, setBrainstorming] = useState(false);
 
   useEffect(() => {
     void listCheckins(link.id).then(setCheckins);
@@ -122,6 +125,27 @@ function ActiveCouple({ link }: { link: PartnerLink }) {
     await addBucket(link.id, newItem.trim());
     setNewItem('');
     setBucket(await listBucket(link.id));
+  }
+
+  async function brainstormBucket() {
+    setBrainstorming(true);
+    try {
+      // Cached for 7d by aiCache so repeated asks during a slow brainstorm
+      // return instantly without billing Anthropic again.
+      const { aiDateIdeas } = await import('@/services/aiService');
+      const got = await aiDateIdeas([], 'medium');
+      setAiIdeas(got);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not brainstorm.');
+    } finally {
+      setBrainstorming(false);
+    }
+  }
+
+  async function addIdeaToBucket(title: string) {
+    await addBucket(link.id, title);
+    setBucket(await listBucket(link.id));
+    toast.success('Added to your bucket list.');
   }
 
   async function togItem(it: BucketItem) {
@@ -169,7 +193,13 @@ function ActiveCouple({ link }: { link: PartnerLink }) {
         </div>
 
         <div className="card-journal">
-          <h2 className="font-serif text-2xl mb-3">Bucket list</h2>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <h2 className="font-serif text-2xl">Bucket list</h2>
+            <button onClick={() => void brainstormBucket()} disabled={brainstorming}
+              className="btn-ghost text-xs border border-cream-200 dark:border-charcoal-700">
+              {brainstorming ? 'Drafting…' : '✨ Brainstorm'}
+            </button>
+          </div>
           <ul className="space-y-1">
             {bucket.map((b) => (
               <li key={b.id} className="flex items-center gap-2">
@@ -187,6 +217,28 @@ function ActiveCouple({ link }: { link: PartnerLink }) {
               Add
             </button>
           </div>
+
+          {aiIdeas && aiIdeas.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-cream-200 dark:border-charcoal-700">
+              <div className="text-xs uppercase tracking-wider text-charcoal-500 dark:text-charcoal-300 mb-2">
+                Claude suggests
+              </div>
+              <ul className="space-y-2">
+                {aiIdeas.map((i, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium">{i.title}</div>
+                      <div className="text-xs text-charcoal-500 dark:text-charcoal-300">
+                        {i.why} · <span className="italic">{i.cost}</span>
+                      </div>
+                    </div>
+                    <button onClick={() => void addIdeaToBucket(i.title)}
+                      className="btn-ghost text-xs shrink-0">Add</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </section>
