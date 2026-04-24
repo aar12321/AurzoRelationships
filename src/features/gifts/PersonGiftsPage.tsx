@@ -5,6 +5,10 @@ import { usePeopleStore } from '@/stores/peopleStore';
 import AddGiftIdeaForm from './AddGiftIdeaForm';
 import GiftIdeaCard from './GiftIdeaCard';
 import { draftIdeas } from '@/services/giftsService';
+import { aiGiftIdeas } from '@/services/aiService';
+import { toast } from '@/stores/toastStore';
+
+type AiIdea = { title: string; reason: string; estimated_cost?: number };
 
 export default function PersonGiftsPage() {
   const { id } = useParams();
@@ -12,6 +16,8 @@ export default function PersonGiftsPage() {
   const loadPeople = usePeopleStore((s) => s.loadAll);
   const { ideas, given, load, addIdea } = useGiftsStore();
   const [showAdd, setShowAdd] = useState(false);
+  const [aiIdeas, setAiIdeas] = useState<AiIdea[] | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
     if (people.length === 0) void loadPeople();
@@ -27,6 +33,37 @@ export default function PersonGiftsPage() {
     person.full_name.split(' ')[0],
     person.notes ?? person.life_context?.job ?? '',
   );
+
+  // TS doesn't preserve the `!person` narrow into function declarations —
+  // capture a non-null alias so the handlers below don't need their own guards.
+  const p = person;
+
+  async function fetchAi() {
+    setAiBusy(true);
+    try {
+      const got = await aiGiftIdeas(p);
+      setAiIdeas(got);
+      toast.success(`${got.length} ideas drafted for ${p.full_name.split(' ')[0]}.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not draft ideas.');
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function saveIdea(idea: AiIdea | { title: string; reason: string }) {
+    try {
+      await addIdea({
+        person_id: p.id,
+        title: idea.title,
+        reason: idea.reason,
+        source: 'ai',
+      }, p.owner_id);
+      toast.success('Saved to their idea list.');
+    } catch {
+      toast.error('Could not save.');
+    }
+  }
 
   return (
     <section className="animate-bloom">
@@ -51,22 +88,37 @@ export default function PersonGiftsPage() {
 
       {personIdeas.length === 0 && (
         <div className="card-journal mb-6">
-          <h2 className="font-serif text-xl text-charcoal-900 mb-3">A few warm starting points</h2>
-          <p className="text-xs text-charcoal-500 mb-3">
-            These are generic — they'll get much better once you tell Aurzo what they love.
-          </p>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h2 className="font-serif text-xl text-charcoal-900 dark:text-cream-50">
+                {aiIdeas ? 'Ideas from Claude' : 'A few warm starting points'}
+              </h2>
+              <p className="text-xs text-charcoal-500 dark:text-charcoal-300 mt-1">
+                {aiIdeas
+                  ? `Tailored to what we know about ${person.full_name.split(' ')[0]}. Save the ones that feel right.`
+                  : `Generic starters — click "Ask Claude" for ideas tailored to ${person.full_name.split(' ')[0]}.`}
+              </p>
+            </div>
+            <button
+              onClick={() => void fetchAi()}
+              disabled={aiBusy}
+              className="btn-primary text-xs shrink-0"
+            >
+              {aiBusy ? 'Drafting…' : aiIdeas ? 'Refresh' : '✨ Ask Claude'}
+            </button>
+          </div>
           <div className="space-y-2">
-            {suggestions.map((s, i) => (
-              <div key={i} className="flex items-start gap-3 p-2 rounded-journal hover:bg-cream-100">
-                <div className="flex-1">
-                  <div className="font-medium">{s.title}</div>
-                  <div className="text-xs text-charcoal-500">{s.reason}</div>
+            {(aiIdeas ?? suggestions).map((s, i) => (
+              <div key={i} className="flex items-start gap-3 p-2 rounded-journal
+                                      hover:bg-cream-100 dark:hover:bg-charcoal-800 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{s.title}</div>
+                  <div className="text-xs text-charcoal-500 dark:text-charcoal-300">{s.reason}</div>
                 </div>
-                <button className="btn-ghost text-xs" onClick={() => {
-                  void addIdea({
-                    person_id: person.id, title: s.title, reason: s.reason, source: 'ai',
-                  }, person.owner_id);
-                }}>Save</button>
+                <button className="btn-ghost text-xs"
+                  onClick={() => void saveIdea(s)}>
+                  Save
+                </button>
               </div>
             ))}
           </div>
