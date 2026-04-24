@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePeopleStore } from '@/stores/peopleStore';
 import type { RelationshipType } from '@/types/people';
+import { useRecentSearches, useSearchLogger } from '@/hooks/useSearchHistory';
 import PeopleFilters from './PeopleFilters';
 import PersonCard from './PersonCard';
 
@@ -10,6 +11,7 @@ export default function PeopleDirectoryPage() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState<RelationshipType | 'all'>('all');
   const [groupId, setGroupId] = useState<string | 'all'>('all');
+  const { recent } = useRecentSearches(5);
 
   useEffect(() => {
     if (people.length === 0) void loadAll();
@@ -24,6 +26,12 @@ export default function PeopleDirectoryPage() {
       return true;
     });
   }, [people, search, type, groupId, memberships]);
+
+  // Log executed searches (debounced; 2+ char floor) so Recent chips and
+  // future cross-platform insights have real signal instead of keystroke noise.
+  useSearchLogger(search, filtered.length, {
+    filters: { type, groupId },
+  });
 
   return (
     <section className="animate-bloom">
@@ -47,6 +55,7 @@ export default function PeopleDirectoryPage() {
         groups={groups}
         groupId={groupId}
         onGroup={setGroupId}
+        recentQueries={recent}
       />
 
       {loading && people.length === 0 ? (
