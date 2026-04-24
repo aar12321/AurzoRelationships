@@ -5,6 +5,7 @@ import { deriveStrength } from '@/services/peopleService';
 import PersonAvatar from '../PersonAvatar';
 import StrengthDot from '../StrengthDot';
 import QuickLogButton from './QuickLogButton';
+import PinToggle from './PinToggle';
 
 type Props = { person: Person };
 
@@ -16,7 +17,7 @@ export default function ProfileHeader({ person }: Props) {
         <PersonAvatar name={person.full_name} photoUrl={person.photo_url} size="lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-4xl font-serif text-charcoal-900 truncate">
+            <h1 className="text-4xl font-serif text-charcoal-900 dark:text-cream-50 truncate">
               {person.full_name}
             </h1>
             <StrengthDot strength={strength} withLabel />
@@ -37,6 +38,7 @@ export default function ProfileHeader({ person }: Props) {
             )}
           </div>
         </div>
+        <PinToggle person={person} />
       </div>
 
       <nav className="mt-5 flex flex-wrap gap-2 items-center">

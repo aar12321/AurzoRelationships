@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { usePeopleStore } from '@/stores/peopleStore';
 import type { RelationshipType } from '@/types/people';
 import { useRecentSearches, useSearchLogger } from '@/hooks/useSearchHistory';
+import { useCollection } from '@/hooks/useSelections';
 import PeopleFilters from './PeopleFilters';
 import PersonCard from './PersonCard';
 
@@ -12,6 +13,11 @@ export default function PeopleDirectoryPage() {
   const [type, setType] = useState<RelationshipType | 'all'>('all');
   const [groupId, setGroupId] = useState<string | 'all'>('all');
   const { recent } = useRecentSearches(5);
+  const { items: pinned } = useCollection('pinned_people');
+  const pinnedPeople = useMemo(() => {
+    const ids = new Set(pinned.map((p) => p.item_id));
+    return people.filter((p) => ids.has(p.id));
+  }, [pinned, people]);
 
   useEffect(() => {
     if (people.length === 0) void loadAll();
@@ -57,6 +63,17 @@ export default function PeopleDirectoryPage() {
         onGroup={setGroupId}
         recentQueries={recent}
       />
+
+      {pinnedPeople.length > 0 && search.trim() === '' && type === 'all' && groupId === 'all' && (
+        <div className="mb-6">
+          <h2 className="text-xs uppercase tracking-wider text-charcoal-500 dark:text-charcoal-300 mb-2">
+            Pinned
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pinnedPeople.map((p, i) => <PersonCard key={p.id} person={p} index={i} />)}
+          </div>
+        </div>
+      )}
 
       {loading && people.length === 0 ? (
         <SkeletonGrid />
