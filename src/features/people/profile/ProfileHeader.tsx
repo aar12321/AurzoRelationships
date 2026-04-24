@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { Person } from '@/types/people';
 import { RELATIONSHIP_TYPE_LABELS } from '@/types/people';
-import { deriveStrength } from '@/services/peopleService';
+import { computeStrength } from '@/services/interactionsService';
+import { useInteractionsStore } from '@/stores/interactionsStore';
 import StrengthDot from '../StrengthDot';
 import QuickLogButton from './QuickLogButton';
 import PinToggle from './PinToggle';
@@ -10,7 +12,14 @@ import AvatarUploader from './AvatarUploader';
 type Props = { person: Person };
 
 export default function ProfileHeader({ person }: Props) {
-  const strength = deriveStrength(person.last_contacted_at, person.fading_threshold_days);
+  // computeStrength reads the interactions array directly, so the dot
+  // updates the instant QuickLogButton writes — no staleness waiting on
+  // the next people-row refresh. Kicks a load if the store is empty.
+  const { interactions, load } = useInteractionsStore();
+  useEffect(() => {
+    if (interactions.length === 0) void load();
+  }, [interactions.length, load]);
+  const strength = computeStrength(person, interactions);
   return (
     <header className="card-journal mb-6">
       <div className="flex items-start gap-5">
