@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Aurzo">
+  <style>
+    .bg { fill: #b4512f; }
+    .fg { fill: #fdfaf3; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #e0a48a; }
+      .fg { fill: #1c1916; }
+    }
+  </style>
+  <rect class="bg" width="100" height="100" rx="22" />
+  <text class="fg" x="50" y="72" text-anchor="middle"
+        font-family="Cormorant Garamond, Georgia, serif"
+        font-size="68" font-weight="600">A</text>
+</svg>

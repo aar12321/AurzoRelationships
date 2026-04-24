@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img"
+     aria-label="Aurzo — A quiet place for the people who matter most">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fdfaf3" />
+      <stop offset="1" stop-color="#f3e9d2" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+
+  <!-- mark -->
+  <g transform="translate(80 80)">
+    <rect width="120" height="120" rx="26" fill="#b4512f" />
+    <text x="60" y="88" text-anchor="middle"
+          font-family="Cormorant Garamond, Georgia, serif"
+          font-size="84" font-weight="600" fill="#fdfaf3">A</text>
+  </g>
+
+  <!-- wordmark -->
+  <text x="80" y="380"
+        font-family="Cormorant Garamond, Georgia, serif"
+        font-size="120" font-weight="600" fill="#1c1916">Aurzo</text>
+
+  <text x="80" y="450"
+        font-family="Cormorant Garamond, Georgia, serif"
+        font-size="64" font-weight="500" fill="#b4512f">Relationship OS</text>
+
+  <!-- tagline -->
+  <text x="80" y="530"
+        font-family="Inter, system-ui, sans-serif"
+        font-size="34" fill="#5e544a">
+    A quiet place for the people who matter most.
+  </text>
+</svg>

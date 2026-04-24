@@ -2,9 +2,51 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#fdfaf3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fdfaf3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1916" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Aurzo" />
+    <meta name="format-detection" content="telephone=no" />
+
     <title>Aurzo — Relationship OS</title>
+    <meta
+      name="description"
+      content="A quiet place for the people who matter most. Remember birthdays, show up when it counts, and deepen the relationships that define a life."
+    />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/favicon.svg" color="#b4512f" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Aurzo" />
+    <meta property="og:title" content="Aurzo — Relationship OS" />
+    <meta
+      property="og:description"
+      content="A quiet place for the people who matter most."
+    />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Aurzo — Relationship OS" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Aurzo — Relationship OS" />
+    <meta
+      name="twitter:description"
+      content="A quiet place for the people who matter most."
+    />
+    <meta name="twitter:image" content="/og-image.svg" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,6 +55,12 @@
     />
   </head>
   <body>
+    <noscript>
+      <p style="font-family: Georgia, serif; padding: 2rem; max-width: 40ch;">
+        Aurzo needs JavaScript to render your relationships. Please enable it, or
+        open the app in a modern browser.
+      </p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

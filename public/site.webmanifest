@@ -1,0 +1,28 @@
+{
+  "name": "Aurzo — Relationship OS",
+  "short_name": "Aurzo",
+  "description": "A quiet place for the people who matter most. Remember birthdays, show up for the people who matter, and deepen every bond that defines a life.",
+  "id": "/relationships",
+  "start_url": "/relationships",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#fdfaf3",
+  "theme_color": "#b4512f",
+  "categories": ["lifestyle", "productivity", "social"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
