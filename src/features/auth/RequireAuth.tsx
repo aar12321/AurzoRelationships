@@ -15,7 +15,7 @@ export default function RequireAuth({ children }: Props) {
   }, [initialize]);
 
   if (loading) return <AuthLoadingScreen />;
-  if (!session) return <Navigate to="/signin" replace state={{ from: location }} />;
+  if (!session) return <Navigate to="/login" replace state={{ from: location }} />;
   return <>{children}</>;
 }
 

@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import SignInPage from '@/features/auth/SignInPage';
+import LoginPage from '@/features/auth/LoginPage';
 import RequireAuth from '@/features/auth/RequireAuth';
 import AppShell from '@/components/layout/AppShell';
 import SetupRequired from '@/components/SetupRequired';
@@ -37,7 +37,9 @@ export default function App() {
       <TitleWatcher />
       <Routes>
       <Route path="/" element={<Navigate to="/relationships" replace />} />
-      <Route path="/signin" element={<SignInPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      {/* Back-compat: old magic-link route. Preserve query params for expired redirects. */}
+      <Route path="/signin" element={<Navigate to="/login" replace />} />
 
       <Route
         path="/relationships"
