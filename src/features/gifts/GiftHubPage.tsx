@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useDatesStore } from '@/stores/datesStore';
 import { useGiftsStore } from '@/stores/giftsStore';
 import { usePeopleStore } from '@/stores/peopleStore';
@@ -50,21 +51,30 @@ export default function GiftHubPage() {
               const personIdeas = d.person_id
                 ? ideas.filter((i) => i.person_id === d.person_id).length
                 : 0;
+              const href = d.person_id
+                ? `/relationships/people/${d.person_id}/gifts`
+                : '/relationships/dates';
               return (
-                <div key={d.id} className="card-journal">
+                <Link key={d.id} to={href}
+                  className="card-journal block hover:-translate-y-0.5
+                             hover:shadow-warm-dark transition-all">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{DATE_TYPE_EMOJI[d.date_type]}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-serif text-lg">{d.label}</div>
-                      <div className="text-xs text-charcoal-500">
+                      <div className="font-serif text-lg truncate">{d.label}</div>
+                      <div className="text-xs text-charcoal-500 dark:text-charcoal-300">
                         {d.person_id && nameFor(d.person_id)} · in {daysUntil(d)}d
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-charcoal-500 mt-3">
-                    {personIdeas} saved idea{personIdeas === 1 ? '' : 's'}
+                  <div className="text-xs text-charcoal-500 dark:text-charcoal-300 mt-3
+                                  flex items-center justify-between">
+                    <span>{personIdeas} saved idea{personIdeas === 1 ? '' : 's'}</span>
+                    <span className="text-terracotta-600 dark:text-terracotta-300">
+                      Browse →
+                    </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -11,7 +11,6 @@ export default function CouplesPage() {
   const { user } = useAuthStore();
   const [link, setLink] = useState<PartnerLink | null>(null);
   const [loading, setLoading] = useState(true);
-  const [partnerEmail, setPartnerEmail] = useState('');
   const [partnerId, setPartnerId] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
@@ -56,13 +55,9 @@ export default function CouplesPage() {
             To open couples mode, both of you need to consent. Enter your partner's Aurzo
             user id (they can share it from their Settings page).
           </p>
-          <FieldRow label="Partner's user id">
+          <FieldRow label="Partner's user id" hint="Your partner can copy this from their Settings → Account. Email lookup is coming once the Aurzo directory ships.">
             <input value={partnerId} onChange={(e) => setPartnerId(e.target.value)}
               className={inputClass} placeholder="uuid" />
-          </FieldRow>
-          <FieldRow label="Or their email (lookup — coming soon)">
-            <input value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)}
-              className={inputClass} disabled />
           </FieldRow>
           {err && <p className="text-sm text-terracotta-700">{err}</p>}
           <button onClick={propose} className="btn-primary w-full" disabled={!partnerId}>
