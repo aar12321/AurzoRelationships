@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom';
 import type { Person } from '@/types/people';
 import { RELATIONSHIP_TYPE_LABELS } from '@/types/people';
 import { deriveStrength } from '@/services/peopleService';
-import PersonAvatar from '../PersonAvatar';
 import StrengthDot from '../StrengthDot';
 import QuickLogButton from './QuickLogButton';
 import PinToggle from './PinToggle';
+import AvatarUploader from './AvatarUploader';
 
 type Props = { person: Person };
 
@@ -14,7 +14,7 @@ export default function ProfileHeader({ person }: Props) {
   return (
     <header className="card-journal mb-6">
       <div className="flex items-start gap-5">
-        <PersonAvatar name={person.full_name} photoUrl={person.photo_url} size="lg" />
+        <AvatarUploader person={person} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-4xl font-serif text-charcoal-900 dark:text-cream-50 truncate">
