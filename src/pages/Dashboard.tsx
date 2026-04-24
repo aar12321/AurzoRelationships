@@ -8,7 +8,8 @@ import { useNotificationsStore } from '@/stores/notificationsStore';
 import { aiSurfacePulse } from '@/services/aiService';
 import { upcomingWithin } from '@/services/datesService';
 import { computeStrength } from '@/services/interactionsService';
-import { getMyProfile } from '@/services/coreService';
+import { getMyProfile, touchAppUsage } from '@/services/coreService';
+import { coreClient } from '@/services/supabase';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
@@ -28,11 +29,12 @@ export default function Dashboard() {
   const initialLoading =
     (peopleLoading || datesLoading || ixLoading) &&
     people.length === 0 && dates.length === 0 && interactions.length === 0;
-  const name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'friend';
+  const firstName = useMemo(() => extractFirstName(user), [user]);
   const [pulseBusy, setPulseBusy] = useState(false);
   const [pulseMsg, setPulseMsg] = useState<string | null>(null);
   const [profile, setProfile] = useState<AurzoProfile | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [daysSinceLastVisit, setDaysSinceLastVisit] = useState<number | null>(null);
 
   async function surfacePulse() {
     if (pulseBusy) return;
@@ -60,6 +62,28 @@ export default function Dashboard() {
       .then((p) => setProfile(p))
       .finally(() => setProfileLoaded(true));
   }, []);
+
+  // Returning-user signal: read last_used_at from app_access before we touch
+  // it, compute days since, then mark this visit. Silent failure — the
+  // greeting just degrades to "no delta shown" if anything goes wrong.
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const { data } = await coreClient
+          .from('app_access')
+          .select('last_used_at')
+          .eq('user_id', user.id)
+          .eq('app_id', 'relationship_os')
+          .maybeSingle();
+        if (data?.last_used_at) {
+          const diffMs = Date.now() - new Date(data.last_used_at).getTime();
+          setDaysSinceLastVisit(Math.floor(diffMs / 86_400_000));
+        }
+        await touchAppUsage(user.id);
+      } catch { /* non-fatal */ }
+    })();
+  }, [user]);
 
   if (profileLoaded && profile && !profile.onboarded_at) {
     return (
@@ -91,9 +115,9 @@ export default function Dashboard() {
   return (
     <section className="animate-bloom">
       <header className="mb-8">
-        <h1 className="text-4xl">Hello, {name}</h1>
-        <p className="text-charcoal-500 mt-1">
-          A quiet place for the people who matter most.
+        <h1 className="text-4xl">{greetingFor(new Date(), firstName)}</h1>
+        <p className="text-charcoal-500 dark:text-charcoal-300 mt-1">
+          {returningSubline(daysSinceLastVisit)}
         </p>
       </header>
 
@@ -235,4 +259,34 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <div className="mt-2">{children}</div>
     </div>
   );
+}
+
+// "user_metadata.full_name" is what Supabase stores when a profile has one;
+// email local-part (before +/., capitalized) is the graceful fallback.
+// Strips anything past the first word so we always greet with a first name.
+function extractFirstName(user: { email?: string | null; user_metadata?: Record<string, unknown> } | null): string {
+  const raw =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    user?.email?.split('@')[0] ??
+    'friend';
+  const first = raw.split(/[\s._+-]/)[0] ?? raw;
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
+
+function greetingFor(now: Date, name: string): string {
+  const h = now.getHours();
+  if (h >= 5  && h < 11) return `Good morning, ${name}.`;
+  if (h >= 11 && h < 17) return `Good afternoon, ${name}.`;
+  if (h >= 17 && h < 21) return `Good evening, ${name}.`;
+  return `Still up, ${name}?`;
+}
+
+function returningSubline(days: number | null): string {
+  if (days == null || days <= 0) return 'A quiet place for the people who matter most.';
+  if (days === 1) return "Welcome back — it's been a day.";
+  if (days < 7)   return `Welcome back — it's been ${days} days.`;
+  if (days < 14)  return "Welcome back — a week away. The people you love missed you.";
+  if (days < 30)  return `Welcome back — ${days} days is a long stretch. Let's catch up.`;
+  return "Welcome back — a while since last time. No guilt, just possibility.";
 }
