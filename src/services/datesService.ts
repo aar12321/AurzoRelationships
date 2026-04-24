@@ -29,9 +29,17 @@ export async function createDate(
   return data as ImportantDate;
 }
 
+// Edits to the *primary* birthday row (oldest by created_at, the one we
+// auto-create from person.birthday) flow back to people.birthday so the
+// profile and the dates list never drift. Callers inside this module
+// (syncPersonBirthday) pass skipPersonSync to break the cycle since they
+// already wrote to people themselves.
+type DateMutateOpts = { skipPersonSync?: boolean };
+
 export async function updateDate(
   id: string,
   patch: Partial<ImportantDateInput>,
+  opts: DateMutateOpts = {},
 ): Promise<ImportantDate> {
   const { data, error } = await supabase
     .from(TABLE)
@@ -40,11 +48,54 @@ export async function updateDate(
     .select()
     .single();
   if (error) throw error;
-  return data as ImportantDate;
+  const d = data as ImportantDate;
+  if (!opts.skipPersonSync && await isPrimaryBirthdayRow(d)) {
+    await writePersonBirthday(d.person_id!, d.event_date);
+  }
+  return d;
 }
 
-export async function deleteDate(id: string): Promise<void> {
+export async function deleteDate(
+  id: string,
+  opts: DateMutateOpts = {},
+): Promise<void> {
+  let syncTarget: string | null = null;
+  if (!opts.skipPersonSync) {
+    const { data: existing } = await supabase
+      .from(TABLE)
+      .select('id, person_id, date_type, created_at')
+      .eq('id', id)
+      .maybeSingle();
+    if (existing && await isPrimaryBirthdayRow(existing as ImportantDate)) {
+      syncTarget = (existing as ImportantDate).person_id;
+    }
+  }
   const { error } = await supabase.from(TABLE).delete().eq('id', id);
+  if (error) throw error;
+  if (syncTarget) await writePersonBirthday(syncTarget, null);
+}
+
+// True when the row is the auto-created/primary birthday row for a person —
+// i.e. has type=birthday, a person_id, and is the oldest row matching that
+// (person_id, date_type). Lets a user keep secondary birthday rows (e.g.
+// "throw-Sarah-a-belated party" reminder) without back-syncing them.
+export async function isPrimaryBirthdayRow(
+  row: Pick<ImportantDate, 'id' | 'person_id' | 'date_type'>,
+): Promise<boolean> {
+  if (row.date_type !== 'birthday' || !row.person_id) return false;
+  const { data } = await supabase
+    .from(TABLE)
+    .select('id')
+    .eq('person_id', row.person_id)
+    .eq('date_type', 'birthday')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return data?.id === row.id;
+}
+
+async function writePersonBirthday(personId: string, birthday: string | null): Promise<void> {
+  const { error } = await supabase.from('people').update({ birthday }).eq('id', personId);
   if (error) throw error;
 }
 
@@ -132,13 +183,13 @@ export async function syncPersonBirthday(args: {
 
   // set → null: delete the matched row
   if (prevBirthday && !nextBirthday && existing) {
-    await deleteDate(existing.id);
+    await deleteDate(existing.id, { skipPersonSync: true });
     return { kind: 'deleted', id: existing.id };
   }
 
   // set → different: update event_date
   if (nextBirthday && existing && existing.event_date !== nextBirthday) {
-    const date = await updateDate(existing.id, { event_date: nextBirthday });
+    const date = await updateDate(existing.id, { event_date: nextBirthday }, { skipPersonSync: true });
     return { kind: 'updated', date };
   }
 
