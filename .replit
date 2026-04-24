@@ -18,10 +18,13 @@ externalPort = 80
 localPort = 4173
 externalPort = 3000
 
+# Autoscale deployment — Replit spins up vite preview to serve `dist/`.
+# For a pure SPA you could also pick "static" in the UI (cheaper, no server);
+# this config supports both. Replit injects $PORT at runtime.
 [deployment]
-deploymentTarget = "static"
+deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-publicDir = "dist"
+run = ["npm", "run", "start"]
 
 [workflows]
 runButton = "Dev"
