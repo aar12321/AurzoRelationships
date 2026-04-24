@@ -11,6 +11,7 @@ import CaptureMomentFAB from '@/components/CaptureMomentFAB';
 import CaptureMomentModal from '@/features/memories/CaptureMomentModal';
 import Toaster from '@/components/Toaster';
 import FeatureTour from '@/components/FeatureTour';
+import ShortcutsOverlay from '@/components/ShortcutsOverlay';
 import { useGlobalHotkeys } from '@/hooks/useGlobalHotkeys';
 import { useLayoutMode } from '@/hooks/useLayoutMode';
 
@@ -25,6 +26,7 @@ export default function AppShell() {
       <CaptureMomentModal />
       <CommandPalette />
       <FeatureTour />
+      <ShortcutsOverlay />
       <Toaster />
     </>
   );
