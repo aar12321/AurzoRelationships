@@ -13,14 +13,21 @@ import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
 import OnboardingFlow from '@/features/onboarding/OnboardingFlow';
+import { CardSkeleton, PersonTileSkeleton } from '@/components/Skeleton';
 import type { AurzoProfile } from '@/types/core';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
-  const { people, loadAll: loadPeople } = usePeopleStore();
-  const { dates, load: loadDates } = useDatesStore();
-  const { interactions, load: loadIx } = useInteractionsStore();
+  const { people, loadAll: loadPeople, loading: peopleLoading } = usePeopleStore();
+  const { dates, load: loadDates, loading: datesLoading } = useDatesStore();
+  const { interactions, load: loadIx, loading: ixLoading } = useInteractionsStore();
   const loadNotifs = useNotificationsStore((s) => s.load);
+  // "Initial load" = any store fetching AND nothing displayable yet. Once data
+  // has arrived once we keep rendering it and don't flash skeletons on
+  // background refreshes.
+  const initialLoading =
+    (peopleLoading || datesLoading || ixLoading) &&
+    people.length === 0 && dates.length === 0 && interactions.length === 0;
   const name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'friend';
   const [pulseBusy, setPulseBusy] = useState(false);
   const [pulseMsg, setPulseMsg] = useState<string | null>(null);
@@ -90,10 +97,17 @@ export default function Dashboard() {
         </p>
       </header>
 
+      {initialLoading ? (
+        <div className="grid gap-4 md:grid-cols-3 mb-8">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton bodyLines={4} />
+        </div>
+      ) : (
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card title="Reach-out queue">
           {fading.length === 0 ? (
-            <p className="text-charcoal-700">Everyone's in a good rhythm. Appreciate it.</p>
+            <p className="text-charcoal-700 dark:text-charcoal-200">Everyone's in a good rhythm. Appreciate it.</p>
           ) : (
             <ul className="space-y-2">
               {fading.map(({ p, s }) => (
@@ -167,13 +181,20 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
+      )}
 
       <section>
         <div className="flex items-end justify-between mb-3">
-          <h2 className="font-serif text-2xl text-charcoal-900">Recently added</h2>
+          <h2 className="font-serif text-2xl text-charcoal-900 dark:text-cream-50">Recently added</h2>
           <Link to="/relationships/people" className="btn-ghost">See all</Link>
         </div>
-        {people.length === 0 ? (
+        {initialLoading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <PersonTileSkeleton />
+            <PersonTileSkeleton />
+            <PersonTileSkeleton />
+          </div>
+        ) : people.length === 0 ? (
           <div className="card-journal text-center py-10">
             <p className="text-charcoal-700">
               Start with one person who's been on your mind.
