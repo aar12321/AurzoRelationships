@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { getMyProfile, listApps, updateMyProfile } from '@/services/coreService';
+import { clearTourSeen, getMyProfile, listApps, updateMyProfile } from '@/services/coreService';
 import { setTheme } from '@/services/themeService';
 import {
   readLayoutPref,
@@ -9,6 +9,8 @@ import {
 } from '@/services/layoutModeService';
 import type { AurzoApp, AurzoProfile } from '@/types/core';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
+import { useTourStore } from '@/stores/tourStore';
+import { toast } from '@/stores/toastStore';
 
 export default function SettingsPage() {
   const { user, logout } = useAuthStore();
@@ -155,6 +157,28 @@ export default function SettingsPage() {
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="card-journal">
+          <h2 className="font-serif text-2xl mb-3">Take the tour again</h2>
+          <p className="text-sm text-charcoal-500 dark:text-charcoal-300 mb-3">
+            A quick walkthrough of every tab and how to move quickly through Aurzo.
+          </p>
+          <button
+            onClick={async () => {
+              if (!user) return;
+              try {
+                await clearTourSeen(user.id);
+                useTourStore.getState().start();
+                toast.success('Tour restarted.');
+              } catch {
+                toast.error('Could not restart the tour. Try again.');
+              }
+            }}
+            className="btn-primary text-sm"
+          >
+            Retake the tour
+          </button>
         </div>
 
         <div className="card-journal">
