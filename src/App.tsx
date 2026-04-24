@@ -3,6 +3,7 @@ import SignInPage from '@/features/auth/SignInPage';
 import RequireAuth from '@/features/auth/RequireAuth';
 import AppShell from '@/components/layout/AppShell';
 import SetupRequired from '@/components/SetupRequired';
+import TitleWatcher from '@/components/TitleWatcher';
 import { supabaseConfigured } from '@/services/supabase';
 import Dashboard from '@/pages/Dashboard';
 import {
@@ -32,7 +33,9 @@ import ForecastPage from '@/features/health/ForecastPage';
 export default function App() {
   if (!supabaseConfigured) return <SetupRequired />;
   return (
-    <Routes>
+    <>
+      <TitleWatcher />
+      <Routes>
       <Route path="/" element={<Navigate to="/relationships" replace />} />
       <Route path="/signin" element={<SignInPage />} />
 
@@ -68,6 +71,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

@@ -3,9 +3,13 @@
 // dedicated screen with precise instructions is friendlier than the
 // "Failed to fetch" red text a user would otherwise see on sign-in.
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+
 const VARS = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
 
 export default function SetupRequired() {
+  // SetupRequired renders before <TitleWatcher />, so set the title ourselves.
+  useDocumentTitle('Setup required');
   return (
     <main className="min-h-screen bg-ivory-50 dark:bg-charcoal-950
                      text-charcoal-900 dark:text-cream-50
