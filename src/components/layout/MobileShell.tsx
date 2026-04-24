@@ -11,6 +11,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import AppSwitcher from '@/features/notifications/AppSwitcher';
 import NotificationBell from '@/features/notifications/NotificationBell';
 import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
+import ConfirmModal from '@/components/ConfirmModal';
 import { NAV_ITEMS, type NavItem } from './nav';
 
 const PRIMARY: NavItem[] = NAV_ITEMS.filter((n) => n.primary);
@@ -18,6 +19,8 @@ const SECONDARY: NavItem[] = NAV_ITEMS.filter((n) => !n.primary);
 
 export default function MobileShell() {
   const { signOut, user } = useAuth();
+  const [confirmOut, setConfirmOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -88,9 +91,23 @@ export default function MobileShell() {
         <MoreDrawer
           onClose={() => setMoreOpen(false)}
           email={user?.email ?? null}
-          onSignOut={() => { void signOut(); }}
+          onSignOut={() => setConfirmOut(true)}
         />
       )}
+
+      <ConfirmModal
+        open={confirmOut}
+        title="Sign out of Aurzo?"
+        description="You'll need to sign back in to see your people, dates, and memories."
+        confirmLabel="Sign out"
+        cancelLabel="Stay"
+        busy={signingOut}
+        onCancel={() => setConfirmOut(false)}
+        onConfirm={async () => {
+          setSigningOut(true);
+          try { await signOut(); } finally { setSigningOut(false); setConfirmOut(false); }
+        }}
+      />
     </div>
   );
 }

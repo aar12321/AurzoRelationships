@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthProvider';
 import AppSwitcher from '@/features/notifications/AppSwitcher';
 import NotificationBell from '@/features/notifications/NotificationBell';
 import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
+import ConfirmModal from '@/components/ConfirmModal';
 import { NAV_ITEMS } from './nav';
 
 export default function DesktopShell() {
   const { signOut, user } = useAuth();
+  const [confirmOut, setConfirmOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   return (
     <div className="min-h-full flex flex-row">
@@ -42,9 +46,23 @@ export default function DesktopShell() {
 
         <div className="mt-auto px-5 py-4 text-xs text-charcoal-500 dark:text-charcoal-300">
           <div className="mb-2 truncate">{user?.email}</div>
-          <button onClick={() => void signOut()} className="btn-ghost w-full justify-start">
+          <button onClick={() => setConfirmOut(true)} className="btn-ghost w-full justify-start">
             Sign out
           </button>
+
+          <ConfirmModal
+            open={confirmOut}
+            title="Sign out of Aurzo?"
+            description="You'll need to sign back in to see your people, dates, and memories."
+            confirmLabel="Sign out"
+            cancelLabel="Stay"
+            busy={signingOut}
+            onCancel={() => setConfirmOut(false)}
+            onConfirm={async () => {
+              setSigningOut(true);
+              try { await signOut(); } finally { setSigningOut(false); setConfirmOut(false); }
+            }}
+          />
         </div>
       </aside>
 
