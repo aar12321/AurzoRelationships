@@ -54,6 +54,7 @@ export default function MobileShell() {
               <NavLink
                 to={it.to}
                 end={it.exact}
+                data-tour={`nav:${it.to}`}
                 className={({ isActive }) =>
                   [
                     'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px]',
@@ -112,6 +113,7 @@ function MoreDrawer(props: { onClose: () => void; email: string | null; onSignOu
           {SECONDARY.map((it) => (
             <li key={it.to}>
               <NavLink to={it.to}
+                data-tour={`nav:${it.to}`}
                 className={({ isActive }) =>
                   [
                     'flex items-center gap-3 px-4 py-3 text-sm transition-colors',

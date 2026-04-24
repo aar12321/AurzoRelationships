@@ -25,6 +25,7 @@ export default function DesktopShell() {
               key={item.to}
               to={item.to}
               end={item.exact}
+              data-tour={`nav:${item.to}`}
               className={({ isActive }) =>
                 [
                   'rounded-journal px-3 py-2 text-sm transition-colors',

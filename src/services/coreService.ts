@@ -57,6 +57,58 @@ export async function touchAppUsage(userId: string): Promise<void> {
     .eq('app_id', APP_ID);
 }
 
+// Feature-tour persistence lives in app_access.preferences (a jsonb bag scoped
+// to { user_id, app_id } with RLS already locked to auth.uid()). We never put
+// tour state in localStorage — it must travel with the user across devices.
+const TOUR_PREFS_KEY = 'tour_seen_at';
+
+export async function getTourSeenAt(): Promise<string | null> {
+  const { data, error } = await coreClient
+    .from('app_access')
+    .select('preferences')
+    .eq('app_id', APP_ID)
+    .maybeSingle();
+  if (error) throw error;
+  const prefs = (data?.preferences ?? {}) as Record<string, unknown>;
+  const v = prefs[TOUR_PREFS_KEY];
+  return typeof v === 'string' ? v : null;
+}
+
+export async function markTourSeen(userId: string): Promise<void> {
+  // Read-modify-write so we don't clobber any sibling preference keys
+  // another feature may have written to the same row.
+  const { data } = await coreClient
+    .from('app_access')
+    .select('preferences')
+    .eq('user_id', userId)
+    .eq('app_id', APP_ID)
+    .maybeSingle();
+  const prev = (data?.preferences ?? {}) as Record<string, unknown>;
+  const next = { ...prev, [TOUR_PREFS_KEY]: new Date().toISOString() };
+  await coreClient
+    .from('app_access')
+    .update({ preferences: next })
+    .eq('user_id', userId)
+    .eq('app_id', APP_ID);
+}
+
+export async function clearTourSeen(userId: string): Promise<void> {
+  // "Retake Tour" in Settings — drop the key so the tour fires again.
+  const { data } = await coreClient
+    .from('app_access')
+    .select('preferences')
+    .eq('user_id', userId)
+    .eq('app_id', APP_ID)
+    .maybeSingle();
+  const prev = (data?.preferences ?? {}) as Record<string, unknown>;
+  const { [TOUR_PREFS_KEY]: _, ...rest } = prev;
+  await coreClient
+    .from('app_access')
+    .update({ preferences: rest })
+    .eq('user_id', userId)
+    .eq('app_id', APP_ID);
+}
+
 export async function myEntitlements(): Promise<Entitlement[]> {
   const { data, error } = await coreClient.from('entitlements').select('*');
   if (error) throw error;

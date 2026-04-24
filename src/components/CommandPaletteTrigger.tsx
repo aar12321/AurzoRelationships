@@ -19,6 +19,7 @@ export default function CommandPaletteTrigger() {
     <button
       onClick={open}
       aria-label="Open command palette"
+      data-tour-global="command-palette"
       className="inline-flex items-center gap-2 rounded-journal border border-cream-200
                  dark:border-charcoal-700 bg-ivory-50 dark:bg-charcoal-800
                  px-2.5 py-1.5 text-xs text-charcoal-500 dark:text-charcoal-300
