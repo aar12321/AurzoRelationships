@@ -20,24 +20,48 @@ import {
   PersonMemories,
   PersonMessages,
   PersonProfile,
-  Settings,
 } from '@/pages/placeholders';
 import NotificationsPage from '@/features/notifications/NotificationsPage';
 import TodayPage from '@/features/today/TodayPage';
 import RelationshipMapPage from '@/features/map/RelationshipMapPage';
 import ForecastPage from '@/features/health/ForecastPage';
+import AurzoAuthGate from '@/services/aurzo/AurzoAuthGate';
+import AurzoLoginPage from '@/pages/AurzoLoginPage';
+import AurzoOnboardingPage from '@/pages/AurzoOnboardingPage';
+import AurzoSettingsPage from '@/pages/AurzoSettingsPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/relationships" replace />} />
       <Route path="/signin" element={<SignInPage />} />
+      <Route path="/login" element={<AurzoLoginPage />} />
+      <Route
+        path="/onboarding"
+        element={
+          <RequireAuth>
+            <AurzoOnboardingPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <AurzoAuthGate>
+              <AurzoSettingsPage />
+            </AurzoAuthGate>
+          </RequireAuth>
+        }
+      />
 
       <Route
         path="/relationships"
         element={
           <RequireAuth>
-            <AppShell />
+            <AurzoAuthGate>
+              <AppShell />
+            </AurzoAuthGate>
           </RequireAuth>
         }
       >
@@ -60,7 +84,7 @@ export default function App() {
         <Route path="memories" element={<MemoryLog />} />
         <Route path="couples" element={<Couples />} />
         <Route path="advisor" element={<Advisor />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="settings" element={<AurzoSettingsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
