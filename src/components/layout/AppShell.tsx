@@ -9,6 +9,7 @@ import MobileShell from './MobileShell';
 import CommandPalette from '@/components/CommandPalette';
 import CaptureMomentFAB from '@/components/CaptureMomentFAB';
 import CaptureMomentModal from '@/features/memories/CaptureMomentModal';
+import Toaster from '@/components/Toaster';
 import { useGlobalHotkeys } from '@/hooks/useGlobalHotkeys';
 import { useLayoutMode } from '@/hooks/useLayoutMode';
 
@@ -22,6 +23,7 @@ export default function AppShell() {
       <CaptureMomentFAB bottomOffset={mode === 'mobile' ? 76 : 24} />
       <CaptureMomentModal />
       <CommandPalette />
+      <Toaster />
     </>
   );
 }

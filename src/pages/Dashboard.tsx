@@ -10,6 +10,7 @@ import { upcomingWithin } from '@/services/datesService';
 import { computeStrength } from '@/services/interactionsService';
 import { getMyProfile, touchAppUsage } from '@/services/coreService';
 import { coreClient } from '@/services/supabase';
+import { toast } from '@/stores/toastStore';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
@@ -42,12 +43,11 @@ export default function Dashboard() {
     try {
       await aiSurfacePulse(people, dates);
       await loadNotifs();
-      setPulseMsg('Pulse delivered — check your bell.');
+      toast.success('Pulse delivered — check your bell.');
     } catch (e) {
-      setPulseMsg(e instanceof Error ? e.message : 'Could not generate pulse');
+      toast.error(e instanceof Error ? e.message : 'Could not generate pulse');
     } finally {
       setPulseBusy(false);
-      setTimeout(() => setPulseMsg(null), 4000);
     }
   }
 
