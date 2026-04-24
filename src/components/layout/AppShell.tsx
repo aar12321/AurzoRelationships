@@ -13,6 +13,7 @@ import Toaster from '@/components/Toaster';
 import FeatureTour from '@/components/FeatureTour';
 import ShortcutsOverlay from '@/components/ShortcutsOverlay';
 import OfflineBanner from '@/components/OfflineBanner';
+import TopProgressBar from '@/components/TopProgressBar';
 import { useGlobalHotkeys } from '@/hooks/useGlobalHotkeys';
 import { useLayoutMode } from '@/hooks/useLayoutMode';
 
@@ -29,6 +30,7 @@ export default function AppShell() {
       <FeatureTour />
       <ShortcutsOverlay />
       <OfflineBanner />
+      <TopProgressBar />
       <Toaster />
     </>
   );
