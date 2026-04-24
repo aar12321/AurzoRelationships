@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { usePeopleStore } from '@/stores/peopleStore';
+import { toast } from '@/stores/toastStore';
 import type {
   CommunicationPref,
   PersonInput,
@@ -66,9 +67,15 @@ export default function AddPersonPage() {
         communication_pref: form.communication_pref || null,
       };
       const person = await add(payload, user.id);
+      if (payload.birthday) {
+        toast.success(`${person.full_name} added. Birthday reminder set for 14, 7, 3 & same-day.`);
+      } else {
+        toast.success(`${person.full_name} added.`);
+      }
       nav(`/relationships/people/${person.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save.');
+      toast.error('Could not save. Try again.');
       setBusy(false);
     }
   }

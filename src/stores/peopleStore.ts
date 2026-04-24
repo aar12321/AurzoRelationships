@@ -10,6 +10,8 @@ import {
   setGroupMembership,
   updatePerson,
 } from '@/services/peopleService';
+import { createDate } from '@/services/datesService';
+import { useDatesStore } from '@/stores/datesStore';
 
 type State = {
   people: Person[];
@@ -59,6 +61,31 @@ export const usePeopleStore = create<State>((set, get) => ({
   add: async (input, ownerId) => {
     const person = await createPerson(input, ownerId);
     set({ people: [...get().people, person].sort(byName) });
+
+    // If the add form included a birthday, auto-create the important_date so
+    // reminders, the dates calendar, and the forecast surface it immediately.
+    // Without this, person.birthday was a dead string on the row — visible
+    // on the profile but silently absent from every reminder path.
+    if (input.birthday) {
+      try {
+        const firstName = person.full_name.split(/\s+/)[0] ?? person.full_name;
+        const d = await createDate({
+          person_id: person.id,
+          label: `${firstName}'s birthday`,
+          date_type: 'birthday',
+          event_date: input.birthday,
+          recurring: true,
+          lead_times: [14, 7, 3, 0],
+        }, ownerId);
+        // Keep the datesStore cache consistent without a refetch.
+        useDatesStore.setState((s) => ({ dates: [...s.dates, d] }));
+      } catch (err) {
+        // Non-fatal: the person is saved; the birthday row just didn't join.
+        // eslint-disable-next-line no-console
+        console.warn('[peopleStore] auto birthday date creation failed:', err);
+      }
+    }
+
     return person;
   },
 
