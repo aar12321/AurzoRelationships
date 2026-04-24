@@ -8,9 +8,10 @@ import { useNotificationsStore } from '@/stores/notificationsStore';
 import { aiSurfacePulse } from '@/services/aiService';
 import { upcomingWithin } from '@/services/datesService';
 import { computeStrength } from '@/services/interactionsService';
-import { getMyProfile, touchAppUsage } from '@/services/coreService';
+import { getMyProfile, getTourSeenAt, touchAppUsage } from '@/services/coreService';
 import { coreClient } from '@/services/supabase';
 import { toast } from '@/stores/toastStore';
+import { useTourStore } from '@/stores/tourStore';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
@@ -62,6 +63,23 @@ export default function Dashboard() {
       .then((p) => setProfile(p))
       .finally(() => setProfileLoaded(true));
   }, []);
+
+  // Auto-start the tour once onboarding is complete AND the user hasn't
+  // seen it yet. tour_seen_at lives on app_access.preferences (per-app),
+  // so it quietly fires the first time a user lands on the dashboard of
+  // each new Aurzo platform they join.
+  useEffect(() => {
+    if (!profileLoaded || !profile?.onboarded_at) return;
+    let alive = true;
+    (async () => {
+      const seen = await getTourSeenAt();
+      if (!alive || seen) return;
+      // Delay so the dashboard finishes painting its first frame before
+      // the backdrop drops — jarring otherwise.
+      setTimeout(() => useTourStore.getState().start(), 600);
+    })();
+    return () => { alive = false; };
+  }, [profileLoaded, profile?.onboarded_at]);
 
   // Returning-user signal: read last_used_at from app_access before we touch
   // it, compute days since, then mark this visit. Silent failure — the
