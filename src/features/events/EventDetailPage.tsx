@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useEventsStore } from '@/stores/eventsStore';
 import { usePeopleStore } from '@/stores/peopleStore';
@@ -9,20 +9,26 @@ import {
 import type { AurzoEvent, EventGuest, EventTask, RSVP } from '@/types/events';
 import { EVENT_TYPE_LABELS, RSVP_LABELS } from '@/types/events';
 import PersonAvatar from '@/features/people/PersonAvatar';
+import ConfirmModal from '@/components/ConfirmModal';
+import { toast } from '@/stores/toastStore';
 
 export default function EventDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const people = usePeopleStore((s) => s.people);
   const loadPeople = usePeopleStore((s) => s.loadAll);
   const events = useEventsStore((s) => s.events);
   const loadEvents = useEventsStore((s) => s.load);
+  const removeEvent = useEventsStore((s) => s.remove);
 
   const [ev, setEv] = useState<AurzoEvent | null>(null);
   const [guests, setGuests] = useState<EventGuest[]>([]);
   const [tasks, setTasks] = useState<EventTask[]>([]);
   const [newTask, setNewTask] = useState('');
   const [addPid, setAddPid] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (people.length === 0) void loadPeople();
@@ -61,6 +67,19 @@ export default function EventDetailPage() {
   async function togT(t: EventTask) {
     await toggleTask(t.id, !t.done);
     if (id) setTasks(await listTasks(id));
+  }
+  async function handleDelete() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await removeEvent(id);
+      toast.success('Event deleted');
+      navigate('/relationships/events');
+    } catch (err) {
+      setDeleting(false);
+      setConfirmDelete(false);
+      toast.error(err instanceof Error ? err.message : 'Could not delete event');
+    }
   }
 
   if (!ev) return <div className="text-charcoal-500 text-sm">Loading…</div>;
@@ -143,6 +162,32 @@ export default function EventDetailPage() {
           </div>
         </div>
       </div>
+
+      <div className="card-journal mt-6 border border-terracotta-500/20">
+        <h2 className="font-serif text-2xl mb-1">Danger zone</h2>
+        <p className="text-sm text-charcoal-500 dark:text-charcoal-300 mb-3">
+          Deleting this event removes its guests and tasks. This cannot be undone.
+        </p>
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="rounded-journal px-4 py-2 text-sm font-medium border
+                     border-terracotta-500/40 text-terracotta-700
+                     hover:bg-terracotta-500 hover:text-ivory-50 transition-colors"
+        >
+          Delete event
+        </button>
+      </div>
+
+      <ConfirmModal
+        open={confirmDelete}
+        title={`Delete ${ev.name}?`}
+        description="This will remove the event along with its guests and tasks. There's no undo."
+        confirmLabel="Delete"
+        tone="danger"
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </section>
   );
 }

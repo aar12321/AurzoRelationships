@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { usePeopleStore } from '@/stores/peopleStore';
-import { listMemories } from '@/services/memoriesService';
+import { deleteMemory, listMemories } from '@/services/memoriesService';
+import { toast } from '@/stores/toastStore';
 import type { Memory } from '@/types/memories';
 import AddMemoryForm from './AddMemoryForm';
 import MemoryCard from './MemoryCard';
@@ -20,6 +21,19 @@ export default function PersonMemoriesPage() {
 
   const person = people.find((p) => p.id === id);
   if (!person) return <div className="text-charcoal-500 text-sm">Loading…</div>;
+
+  async function handleDelete(memoryId: string) {
+    if (!confirm('Delete this memory? This cannot be undone.')) return;
+    const prev = memories;
+    setMemories((cur) => (cur ?? []).filter((m) => m.id !== memoryId));
+    try {
+      await deleteMemory(memoryId);
+      toast.success('Memory deleted');
+    } catch (err) {
+      setMemories(prev);
+      toast.error(err instanceof Error ? err.message : 'Could not delete memory');
+    }
+  }
 
   return (
     <section className="animate-bloom">
@@ -50,7 +64,9 @@ export default function PersonMemoriesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {memories.map((m) => <MemoryCard key={m.id} memory={m} />)}
+          {memories.map((m) => (
+            <MemoryCard key={m.id} memory={m} onDelete={() => void handleDelete(m.id)} />
+          ))}
         </div>
       )}
     </section>

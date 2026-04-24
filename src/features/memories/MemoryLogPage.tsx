@@ -36,7 +36,9 @@ export default function MemoryLogPage() {
         <div className="mb-6">
           <h2 className="font-serif text-2xl text-charcoal-900 mb-2">On this day</h2>
           <div className="space-y-3">
-            {thisDay.map((m) => <MemoryCard key={m.id} memory={m} />)}
+            {thisDay.map((m) => (
+              <MemoryCard key={m.id} memory={m} onDelete={() => void remove(m.id)} />
+            ))}
           </div>
         </div>
       )}
