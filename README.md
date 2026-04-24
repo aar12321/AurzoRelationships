@@ -49,6 +49,17 @@ Apply migrations via the Supabase CLI:
 supabase db push
 ```
 
+## Deploy on Replit
+
+1. Import this repo as a Replit project (auto-detected via `.replit`).
+2. In Replit **Secrets**, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+   (values live in `.env.example`). Optionally set `VITE_AURZO_SSO_URL`.
+   Never add `ANTHROPIC_API_KEY` here — it is server-only and lives in the
+   Supabase edge function.
+3. Click **Run** — Replit runs `npm install && npm run dev` on `0.0.0.0:5173`.
+4. Click **Deploy → Static** — Replit runs `npm run build` and serves `dist/`.
+   Deep links work because `dist/404.html` mirrors `index.html` (SPA fallback).
+
 ## Privacy
 
 Relationship data is deeply personal. Every table has RLS enabled and every row

@@ -10,6 +10,16 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
+    strictPort: false,
+    // Replit fronts the dev server with a *.replit.dev / *.repl.co proxy;
+    // Vite's host-header check must be relaxed or every request 403s.
+    allowedHosts: true,
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: true,
   },
 });

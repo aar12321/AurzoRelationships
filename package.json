@@ -6,8 +6,9 @@
   "description": "Aurzo Relationship OS — a private, thoughtful tool for maintaining and deepening the relationships that matter most.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/spa-fallback.mjs",
     "preview": "vite preview",
+    "start": "vite preview --host 0.0.0.0 --port 4173",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
@@ -21,6 +22,9 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
     "zustand": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
