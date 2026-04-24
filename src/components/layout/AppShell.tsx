@@ -14,6 +14,7 @@ import FeatureTour from '@/components/FeatureTour';
 import ShortcutsOverlay from '@/components/ShortcutsOverlay';
 import OfflineBanner from '@/components/OfflineBanner';
 import TopProgressBar from '@/components/TopProgressBar';
+import ScrollToTop from '@/components/ScrollToTop';
 import { useGlobalHotkeys } from '@/hooks/useGlobalHotkeys';
 import { useLayoutMode } from '@/hooks/useLayoutMode';
 
@@ -23,6 +24,7 @@ export default function AppShell() {
 
   return (
     <>
+      <ScrollToTop />
       {mode === 'mobile' ? <MobileShell /> : <DesktopShell />}
       <CaptureMomentFAB bottomOffset={mode === 'mobile' ? 76 : 24} />
       <CaptureMomentModal />
