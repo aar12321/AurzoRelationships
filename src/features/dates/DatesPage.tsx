@@ -4,6 +4,7 @@ import { usePeopleStore } from '@/stores/peopleStore';
 import {
   recentlyPassed, sortByUpcoming, upcomingWithin,
 } from '@/services/datesService';
+import type { ImportantDate } from '@/types/dates';
 import DateRow from './DateRow';
 import AddDateForm from './AddDateForm';
 
@@ -12,6 +13,7 @@ export default function DatesPage() {
   const loadPeople = usePeopleStore((s) => s.loadAll);
   const peopleLen = usePeopleStore((s) => s.people.length);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (dates.length === 0) void load();
@@ -24,6 +26,24 @@ export default function DatesPage() {
     [dates, upcoming],
   );
   const passed = useMemo(() => recentlyPassed(dates, 7), [dates]);
+
+  const renderRow = (d: ImportantDate) => {
+    if (editingId === d.id) {
+      return (
+        <div key={d.id} className="border-b border-cream-200 last:border-0 py-3">
+          <AddDateForm existing={d} onDone={() => setEditingId(null)} />
+        </div>
+      );
+    }
+    return (
+      <DateRow
+        key={d.id}
+        date={d}
+        onEdit={() => setEditingId(d.id)}
+        onDelete={() => void remove(d.id)}
+      />
+    );
+  };
 
   return (
     <section className="animate-bloom">
@@ -59,23 +79,17 @@ export default function DatesPage() {
         <div className="space-y-6">
           {passed.length > 0 && (
             <Section title="Recently passed" hint="It's not too late to reach out.">
-              {passed.map((d) => (
-                <DateRow key={d.id} date={d} onDelete={() => void remove(d.id)} />
-              ))}
+              {passed.map(renderRow)}
             </Section>
           )}
           {upcoming.length > 0 && (
             <Section title="Coming up" hint="Within the next month.">
-              {upcoming.map((d) => (
-                <DateRow key={d.id} date={d} onDelete={() => void remove(d.id)} />
-              ))}
+              {upcoming.map(renderRow)}
             </Section>
           )}
           {later.length > 0 && (
             <Section title="Later">
-              {later.map((d) => (
-                <DateRow key={d.id} date={d} onDelete={() => void remove(d.id)} />
-              ))}
+              {later.map(renderRow)}
             </Section>
           )}
         </div>

@@ -5,9 +5,9 @@ import {
 } from '@/types/dates';
 import { usePeopleStore } from '@/stores/peopleStore';
 
-type Props = { date: ImportantDate; onDelete?: () => void };
+type Props = { date: ImportantDate; onEdit?: () => void; onDelete?: () => void };
 
-export default function DateRow({ date, onDelete }: Props) {
+export default function DateRow({ date, onEdit, onDelete }: Props) {
   const people = usePeopleStore((s) => s.people);
   const person = people.find((p) => p.id === date.person_id);
   const n = daysUntil(date);
@@ -39,8 +39,21 @@ export default function DateRow({ date, onDelete }: Props) {
         n <= 7 ? 'bg-gold-300 text-charcoal-900' :
         'bg-cream-200 text-charcoal-500',
       ].join(' ')}>{label}</div>
+      {onEdit && (
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
+          className="btn-ghost text-xs"
+          aria-label="Edit"
+        >
+          Edit
+        </button>
+      )}
       {onDelete && (
-        <button onClick={onDelete} className="btn-ghost text-xs" aria-label="Delete">
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+          className="btn-ghost text-xs"
+          aria-label="Delete"
+        >
           ✕
         </button>
       )}
