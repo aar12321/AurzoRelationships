@@ -7,6 +7,7 @@ import { upcomingWithin } from '@/services/datesService';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import AddGiftIdeaForm from './AddGiftIdeaForm';
 import GiftIdeaCard from './GiftIdeaCard';
+import BudgetSnapshot from './BudgetSnapshot';
 
 export default function GiftHubPage() {
   const { dates, load: loadDates } = useDatesStore();
@@ -42,6 +43,8 @@ export default function GiftHubPage() {
       </header>
 
       {showAdd && <div className="mb-6"><AddGiftIdeaForm onDone={() => setShowAdd(false)} /></div>}
+
+      <BudgetSnapshot />
 
       {upcomingGiftOccasions.length > 0 && (
         <div className="mb-8">

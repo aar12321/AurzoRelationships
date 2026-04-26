@@ -1,12 +1,23 @@
-import type { GiftIdea } from '@/types/gifts';
+import { useState } from 'react';
+import type { GiftIdea, GiftStatus } from '@/types/gifts';
 import { GIFT_STATUS_LABELS } from '@/types/gifts';
 import { useGiftsStore } from '@/stores/giftsStore';
+import MarkGivenModal from './MarkGivenModal';
 
 type Props = { idea: GiftIdea; showPerson?: string };
 
 export default function GiftIdeaCard({ idea, showPerson }: Props) {
   const edit = useGiftsStore((s) => s.editIdea);
   const remove = useGiftsStore((s) => s.removeIdea);
+  const [showGiven, setShowGiven] = useState(false);
+
+  function onStatusChange(next: GiftStatus) {
+    if (next === 'given' && idea.status !== 'given') {
+      setShowGiven(true);
+      return;
+    }
+    void edit(idea.id, { status: next });
+  }
 
   return (
     <div className="card-journal">
@@ -31,7 +42,7 @@ export default function GiftIdeaCard({ idea, showPerson }: Props) {
         <div className="flex flex-col gap-1">
           <select
             value={idea.status}
-            onChange={(e) => void edit(idea.id, { status: e.target.value as GiftIdea['status'] })}
+            onChange={(e) => onStatusChange(e.target.value as GiftStatus)}
             className="text-xs rounded border border-cream-200 bg-ivory-50 px-1 py-1"
           >
             {Object.entries(GIFT_STATUS_LABELS).map(([k, v]) => (
@@ -42,6 +53,9 @@ export default function GiftIdeaCard({ idea, showPerson }: Props) {
             aria-label="Delete">✕</button>
         </div>
       </div>
+      {showGiven && (
+        <MarkGivenModal idea={idea} onClose={() => setShowGiven(false)} />
+      )}
     </div>
   );
 }
