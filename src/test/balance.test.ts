@@ -18,6 +18,7 @@ function p(id: string, type: RelationshipType, last?: string): Person {
     location: null, birthday: null, life_context: {},
     communication_pref: null, notes: null, custom_fields: [],
     fading_threshold_days: 30, last_contacted_at: last ?? null,
+    priority_tier: null, cadence_days: null, do_not_nudge_until: null, social_capacity: null,
     created_at: '2024-01-01', updated_at: '2024-01-01',
   };
 }

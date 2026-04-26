@@ -11,6 +11,7 @@ function mkP(partial: Partial<Person> = {}): Person {
     location: null, birthday: null, life_context: {},
     communication_pref: null, notes: null, custom_fields: [],
     fading_threshold_days: null, last_contacted_at: null,
+    priority_tier: null, cadence_days: null, do_not_nudge_until: null, social_capacity: null,
     created_at: '2024-01-01', updated_at: '2024-01-01',
     ...partial,
   };
