@@ -8,6 +8,8 @@ import { STRENGTH_LABELS } from '@/types/people';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
 import LogInteractionForm from './LogInteractionForm';
+import SuggestionsPanel from './SuggestionsPanel';
+import BalancePanel from './BalancePanel';
 
 const BUCKETS: Strength[] = ['thriving', 'active', 'fading', 'dormant', 'unknown'];
 
@@ -49,6 +51,9 @@ export default function HealthPage() {
       {showLog && (
         <div className="mb-6"><LogInteractionForm onDone={() => setShowLog(false)} /></div>
       )}
+
+      <SuggestionsPanel />
+      <BalancePanel />
 
       {reachOut.length > 0 && (
         <div className="card-journal mb-6 bg-gold-300/20 border-gold-500">
