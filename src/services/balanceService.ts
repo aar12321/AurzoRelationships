@@ -97,10 +97,16 @@ export function cadenceDrift(
       .sort((a, b) => a - b);
     if (ix.length < 3) continue; // need history to know "typical"
 
-    // typical cadence = median gap between consecutive interactions (excluding the last open gap)
-    const gaps: number[] = [];
-    for (let k = 1; k < ix.length; k++) gaps.push((ix[k] - ix[k - 1]) / DAY);
-    const typical = median(gaps);
+    // typical cadence = user-set cadence_days when provided, else median gap
+    // between consecutive logged interactions.
+    let typical: number;
+    if (p.cadence_days && p.cadence_days >= 1) {
+      typical = p.cadence_days;
+    } else {
+      const gaps: number[] = [];
+      for (let k = 1; k < ix.length; k++) gaps.push((ix[k] - ix[k - 1]) / DAY);
+      typical = median(gaps);
+    }
     if (typical < 1) continue;
 
     const currentGap = (now.getTime() - ix[ix.length - 1]) / DAY;

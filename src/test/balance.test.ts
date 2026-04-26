@@ -92,6 +92,17 @@ describe('cadenceDrift', () => {
     const ixs = [ix('a', 28), ix('a', 21), ix('a', 14), ix('a', 7)];
     expect(cadenceDrift([person], ixs, NOW)).toHaveLength(0);
   });
+
+  it('uses user-set cadence_days when provided, overriding the median', () => {
+    // Logged history suggests ~30-day cadence (would NOT flag at 30d gap).
+    // But user set cadence_days=7, so 30d gap becomes a 4.3x drift.
+    const person = { ...p('a', 'close_friend'), cadence_days: 7 };
+    const ixs = [ix('a', 90), ix('a', 60), ix('a', 30)];
+    const drifts = cadenceDrift([person], ixs, NOW);
+    expect(drifts).toHaveLength(1);
+    expect(drifts[0].typicalCadenceDays).toBe(7);
+    expect(drifts[0].currentGapDays).toBe(30);
+  });
 });
 
 describe('buildSuggestions', () => {

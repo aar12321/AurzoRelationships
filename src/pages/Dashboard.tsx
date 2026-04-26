@@ -16,6 +16,7 @@ import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
 import OnboardingFlow from '@/features/onboarding/OnboardingFlow';
+import InnerCirclePanel from '@/features/dashboard/InnerCirclePanel';
 import { CardSkeleton, PersonTileSkeleton } from '@/components/Skeleton';
 import type { AurzoProfile } from '@/types/core';
 
@@ -138,6 +139,8 @@ export default function Dashboard() {
           {returningSubline(daysSinceLastVisit)}
         </p>
       </header>
+
+      <InnerCirclePanel />
 
       {initialLoading ? (
         <div className="grid gap-4 md:grid-cols-3 mb-8">

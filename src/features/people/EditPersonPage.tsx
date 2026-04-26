@@ -11,13 +11,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { usePeopleStore } from '@/stores/peopleStore';
 import { toast } from '@/stores/toastStore';
-import ConfirmModal from '@/components/ConfirmModal';
 import type {
   CommunicationPref,
   Person,
   PersonInput,
+  PriorityTier,
   RelationshipGoal,
   RelationshipType,
+  SocialCapacity,
 } from '@/types/people';
 import {
   COMMUNICATION_PREF_LABELS,
@@ -25,6 +26,8 @@ import {
   RELATIONSHIP_TYPE_LABELS,
 } from '@/types/people';
 import FieldRow, { inputClass } from './form/FieldRow';
+import DangerZone from './form/DangerZone';
+import PriorityCadenceSection from './form/PriorityCadenceSection';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 type Form = {
@@ -36,6 +39,10 @@ type Form = {
   notes: string;
   relationship_goal: RelationshipGoal | '';
   communication_pref: CommunicationPref | '';
+  priority_tier: PriorityTier | '';
+  cadence_days: string;
+  do_not_nudge_until: string;
+  social_capacity: SocialCapacity | '';
 };
 
 function fromPerson(p: Person): Form {
@@ -48,6 +55,10 @@ function fromPerson(p: Person): Form {
     notes: p.notes ?? '',
     relationship_goal: p.relationship_goal ?? '',
     communication_pref: p.communication_pref ?? '',
+    priority_tier: p.priority_tier ?? '',
+    cadence_days: p.cadence_days != null ? String(p.cadence_days) : '',
+    do_not_nudge_until: p.do_not_nudge_until ? p.do_not_nudge_until.slice(0, 10) : '',
+    social_capacity: p.social_capacity ?? '',
   };
 }
 
@@ -55,15 +66,13 @@ export default function EditPersonPage() {
   const { id } = useParams();
   const nav = useNavigate();
   const { user } = useAuthStore();
-  const { people, loadAll, update, remove } = usePeopleStore();
+  const { people, loadAll, update } = usePeopleStore();
   const person = people.find((p) => p.id === id);
   useDocumentTitle(person ? `Edit ${person.full_name}` : 'Edit person');
 
   const [form, setForm] = useState<Form | null>(person ? fromPerson(person) : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (people.length === 0) void loadAll();
@@ -96,6 +105,8 @@ export default function EditPersonPage() {
     if (!user || !form || !person) return;
     setBusy(true); setError(null);
     try {
+      const cadence = form.cadence_days.trim();
+      const cadenceParsed = cadence === '' ? null : Math.max(1, Math.min(365, parseInt(cadence, 10)));
       const patch: Partial<PersonInput> = {
         full_name: form.full_name.trim(),
         relationship_type: form.relationship_type || null,
@@ -105,6 +116,12 @@ export default function EditPersonPage() {
         notes: form.notes.trim() || null,
         relationship_goal: form.relationship_goal || null,
         communication_pref: form.communication_pref || null,
+        priority_tier: form.priority_tier || null,
+        cadence_days: cadenceParsed && !Number.isNaN(cadenceParsed) ? cadenceParsed : null,
+        do_not_nudge_until: form.do_not_nudge_until
+          ? new Date(form.do_not_nudge_until).toISOString()
+          : null,
+        social_capacity: form.social_capacity || null,
       };
       await update(person.id, patch);
       toast.success('Saved.');
@@ -194,6 +211,16 @@ export default function EditPersonPage() {
             className={inputClass} />
         </FieldRow>
 
+        <PriorityCadenceSection
+          value={{
+            priority_tier: form.priority_tier,
+            cadence_days: form.cadence_days,
+            do_not_nudge_until: form.do_not_nudge_until,
+            social_capacity: form.social_capacity,
+          }}
+          onChange={(k, v) => set(k, v as Form[typeof k])}
+        />
+
         {error && <p className="text-sm text-terracotta-700">{error}</p>}
 
         <div className="flex items-center justify-end gap-3">
@@ -208,52 +235,7 @@ export default function EditPersonPage() {
         </div>
       </form>
 
-      <div className="card-journal mt-6 border-terracotta-200 dark:border-terracotta-700/40">
-        <h2 className="font-serif text-xl mb-2 text-terracotta-700 dark:text-terracotta-300">
-          Danger zone
-        </h2>
-        <p className="text-sm text-charcoal-500 dark:text-charcoal-300 mb-4">
-          Deleting {person.full_name} also removes their memories, gift ideas,
-          messages, important dates, and interaction history. This can't be undone.
-        </p>
-        <button
-          type="button"
-          onClick={() => setConfirmDelete(true)}
-          className="rounded-journal px-4 py-2 text-sm border border-terracotta-300
-                     dark:border-terracotta-700/50 text-terracotta-700
-                     dark:text-terracotta-300 hover:bg-terracotta-50
-                     dark:hover:bg-terracotta-900/30 transition-colors"
-        >
-          Delete {person.full_name}
-        </button>
-      </div>
-
-      <ConfirmModal
-        open={confirmDelete}
-        title={`Delete ${person.full_name}?`}
-        description={
-          <>
-            This removes them and everything connected to them — memories,
-            gifts, messages, dates, interactions. It can't be undone.
-          </>
-        }
-        confirmLabel={`Yes, delete ${person.full_name.split(' ')[0]}`}
-        cancelLabel="Keep"
-        tone="danger"
-        busy={deleting}
-        onCancel={() => setConfirmDelete(false)}
-        onConfirm={async () => {
-          setDeleting(true);
-          try {
-            await remove(person.id);
-            toast.success(`${person.full_name} removed.`);
-            nav('/relationships/people');
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : 'Could not delete.');
-            setDeleting(false);
-          }
-        }}
-      />
+      <DangerZone person={person} />
     </section>
   );
 }
