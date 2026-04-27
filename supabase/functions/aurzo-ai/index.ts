@@ -60,7 +60,20 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'missing auth' }, 401, cors);
 
-    const body: Action = await req.json();
+    const raw = await req.json() as Record<string, unknown> & Action;
+    const body: Action = raw;
+
+    // Optional shared-cache write-through hints. Clients ask the server to
+    // record the fresh result into aurzo_core.ai_cache_shared by passing a
+    // sanitized cache key + logical action. Writes use the service role so
+    // RLS on the shared table can stay locked down (clients can SELECT but
+    // can't INSERT/UPDATE/DELETE — see migration 0013).
+    const cacheSharedKey = typeof raw.cache_shared_key === 'string'
+      ? raw.cache_shared_key : null;
+    const cacheSharedAction = typeof raw.cache_shared_action === 'string'
+      ? raw.cache_shared_action : null;
+    const cacheSharedTtlMs = typeof raw.cache_shared_ttl_ms === 'number'
+      ? raw.cache_shared_ttl_ms : null;
 
     // Service-role path: pg_cron dispatches with the service key. No end-user
     // JWT is involved, so we authenticate by comparing the bearer against the
@@ -94,6 +107,20 @@ Deno.serve(async (req) => {
     }
 
     const result = await handle(body);
+
+    // Shared cache write-through. Best-effort; we never fail the user's
+    // request if the cache write trips. Skipped when the caller didn't
+    // ask for it (cache_shared_key / cache_shared_action both required).
+    if (cacheSharedKey && cacheSharedAction) {
+      void writeSharedCache(
+        cacheSharedAction,
+        cacheSharedKey,
+        body,
+        result,
+        cacheSharedTtlMs,
+      );
+    }
+
     return json(result, 200, cors);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'unknown error';
@@ -431,6 +458,74 @@ function textOf(resp: Anthropic.Message): string {
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
     .map((b) => b.text)
     .join('\n');
+}
+
+// Write a fresh AI response into the cross-user shared cache. The client
+// supplies the (sanitized) key + action — we never derive one server-side
+// from the body, since the body may contain PII (names, notes) and we'd
+// risk the cache row leaking that. TTL defaults to 7 days for parity with
+// the per-user cache lifetimes used in aiService.ts. Failure is non-fatal.
+async function writeSharedCache(
+  action: string,
+  cacheKey: string,
+  body: Action,
+  result: unknown,
+  ttlMs: number | null,
+): Promise<void> {
+  try {
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const url = Deno.env.get('SUPABASE_URL');
+    if (!serviceKey || !url) return;
+    const admin = createClient(url, serviceKey);
+    const ttl = ttlMs == null ? 7 * 24 * 60 * 60 * 1000 : ttlMs;
+    const expires_at = ttl > 0 ? new Date(Date.now() + ttl).toISOString() : null;
+    await admin
+      .schema('aurzo_core')
+      .from('ai_cache_shared')
+      .upsert(
+        {
+          platform: 'relationship_os',
+          action,
+          cache_key: cacheKey,
+          input_params: sanitizeParams(body),
+          result: result as Record<string, unknown>,
+          model: modelForAction(body.action),
+          expires_at,
+          last_used_at: new Date().toISOString(),
+        },
+        { onConflict: 'platform,cache_key' },
+      );
+  } catch (e) {
+    console.warn('[shared-cache] write failed:', e);
+  }
+}
+
+// We don't store the raw request body — it can include names/notes that
+// must never land in a cross-user row. Just record action + a short shape
+// hint useful for ops/debugging.
+function sanitizeParams(body: Action): Record<string, unknown> {
+  switch (body.action) {
+    case 'date_ideas':
+      return {
+        action: body.action,
+        budget: body.budget ?? null,
+        location: body.location ?? null,
+        interests_count: (body.shared_interests ?? []).length,
+      };
+    default:
+      return { action: body.action };
+  }
+}
+
+function modelForAction(action: Action['action']): string {
+  switch (action) {
+    case 'compose':
+    case 'advise':       return 'claude-sonnet-4-6';
+    case 'gift_ideas':
+    case 'date_ideas':
+    case 'weekly_pulse': return 'claude-haiku-4-5';
+    default:             return 'unknown';
+  }
 }
 
 function json(body: unknown, status: number, cors: Record<string, string>): Response {

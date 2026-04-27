@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { cachedAi, TTL } from './aiCache';
+import { cachedAi, cachedAiShared, TTL } from './aiCache';
 import type { Person } from '@/types/people';
 import type { ImportantDate } from '@/types/dates';
 import { daysUntil } from '@/types/dates';
@@ -68,25 +68,29 @@ export async function aiGiftIdeas(
   );
 }
 
+// Date ideas have a clean public-shape input — sorted shared interest
+// tags + budget bucket + optional location. None of that is PII, so we
+// route through the cross-user shared cache: a fresh response paid for
+// by anyone satisfies everyone with the same shape.
 export async function aiDateIdeas(
   sharedInterests: string[],
   budget?: 'low' | 'medium' | 'high',
   location?: string,
 ): Promise<DateIdea[]> {
-  return cachedAi(
-    {
-      action: 'date_ideas',
-      params: {
-        interests: [...sharedInterests].sort(),
-        budget: budget ?? null,
-        location: location ?? null,
-      },
-      ttlMs: TTL.day7,
-    },
-    async () => {
+  const fingerprint = {
+    interests: [...sharedInterests].map((s) => s.trim().toLowerCase()).sort(),
+    budget: budget ?? null,
+    location: location?.trim().toLowerCase() ?? null,
+  };
+  return cachedAiShared(
+    { action: 'date_ideas', params: fingerprint },
+    async (cacheSharedKey) => {
       const r = await invoke<{ ideas: DateIdea[] }>({
         action: 'date_ideas',
         shared_interests: sharedInterests, budget, location,
+        cache_shared_key: cacheSharedKey,
+        cache_shared_action: 'date_ideas',
+        cache_shared_ttl_ms: TTL.day7,
       });
       return r.ideas ?? [];
     },

@@ -109,3 +109,50 @@ export const TTL = {
   day7: 7 * 24 * 60 * 60 * 1000,
   day30: 30 * 24 * 60 * 60 * 1000,
 } as const;
+
+// ---------- Shared (cross-user) cache ----------
+// Sibling of cachedAi above. Reads from aurzo_core.ai_cache_shared, which
+// stores results keyed only on (platform, cache_key) — no user_id — so
+// a fresh response paid for by user A satisfies user B's same request.
+//
+// Privacy contract: callers MUST pass a fingerprint with no PII. Writes
+// happen server-side inside the aurzo-ai edge function with the service
+// role; clients can never write to this table directly. The fetcher is
+// expected to forward `cacheSharedKey` and `cacheSharedAction` to the
+// edge function so it knows where to record the response on a miss.
+
+export type SharedCacheOptions = {
+  action: string;       // logical action name, also stored in the row
+  params: unknown;       // sanitized fingerprint (no names, no notes, no ids)
+};
+
+export type SharedCacheCallback<T> = (cacheSharedKey: string) => Promise<T>;
+
+export async function cachedAiShared<T>(
+  opts: SharedCacheOptions,
+  fetcher: SharedCacheCallback<T>,
+): Promise<T> {
+  const cacheKey = await buildCacheKey(opts.action, opts.params);
+
+  // 1. Lookup. RLS allows any authenticated user to SELECT.
+  const now = new Date().toISOString();
+  const { data: hit } = await coreClient
+    .from('ai_cache_shared')
+    .select('result, expires_at')
+    .eq('platform', PLATFORM_ID)
+    .eq('cache_key', cacheKey)
+    .maybeSingle();
+
+  if (hit && (!hit.expires_at || hit.expires_at > now)) {
+    // Best-effort hit recording. Failure is non-fatal.
+    void coreClient.rpc('touch_ai_cache_shared', {
+      p_platform: PLATFORM_ID,
+      p_cache_key: cacheKey,
+    });
+    return hit.result as T;
+  }
+
+  // 2. Miss — fetcher must invoke the edge fn with cacheSharedKey so the
+  //    server-side write-through lands in the row keyed identically.
+  return fetcher(cacheKey);
+}
