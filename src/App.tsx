@@ -8,13 +8,12 @@ import SetupRequired from '@/components/SetupRequired';
 import TitleWatcher from '@/components/TitleWatcher';
 import { CardSkeleton } from '@/components/Skeleton';
 import { supabaseConfigured } from '@/services/supabase';
-import Dashboard from '@/pages/Dashboard';
+import TodayPage from '@/features/today/TodayPage';
 
-// Route-level code splitting. Dashboard + LoginPage stay eager because
-// one of them is the landing frame for every session; everything else
-// pulls down as a separate chunk on first navigation. First-paint
-// bundle drops materially, especially on mobile.
-const TodayPage          = lazy(() => import('@/features/today/TodayPage'));
+// Route-level code splitting. TodayPage + LoginPage stay eager because
+// Today is now the landing surface for every session; the Dashboard is
+// reachable at /relationships/dashboard and lazy-loads on first navigation.
+const Dashboard          = lazy(() => import('@/pages/Dashboard'));
 const RelationshipMapPage = lazy(() => import('@/features/map/RelationshipMapPage'));
 const PeopleDirectory    = lazy(() => import('@/features/people/PeopleDirectoryPage'));
 const AddPerson          = lazy(() => import('@/features/people/AddPersonPage'));
@@ -67,8 +66,9 @@ export default function App() {
               </RequireAuth>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="today" element={<TodayPage />} />
+            <Route index element={<TodayPage />} />
+            <Route path="today" element={<Navigate to="/relationships" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="map" element={<RelationshipMapPage />} />
             <Route path="people" element={<PeopleDirectory />} />
             <Route path="people/new" element={<AddPerson />} />
