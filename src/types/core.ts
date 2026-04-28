@@ -69,3 +69,17 @@ export type Notification = {
   read_at: string | null;
   sent_at: string;
 };
+
+export type NotificationChannel = 'in_app' | 'email' | 'push' | 'sms';
+
+export type NotificationPref = {
+  user_id: string;
+  channel: NotificationChannel;
+  app_id: AurzoAppId | null;
+  category: string;
+  enabled: boolean;
+  // HH:MM:SS — null if no quiet window. Crossing midnight is allowed
+  // (start > end means the window wraps to the next day).
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+};

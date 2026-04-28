@@ -35,7 +35,7 @@ Rules you always follow:
 type Action =
   | { action: 'advise'; question: string; people?: PersonCtx[]; dates?: DateCtx[]; stream?: boolean }
   | { action: 'compose'; person: PersonCtx; occasion: string; tone: string; channel: string }
-  | { action: 'gift_ideas'; person: PersonCtx; budget?: number; occasion?: string }
+  | { action: 'gift_ideas'; person: PersonCtx; budget?: number; occasion?: string; interest_tags?: string[] }
   | { action: 'date_ideas'; shared_interests?: string[]; budget?: string; location?: string }
   | { action: 'weekly_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
   | { action: 'surface_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
@@ -311,7 +311,19 @@ Respond in plain prose. 2-5 sentences. Reference specific people or dates when i
 // ---------- cheap actions (Haiku 4.5) ----------
 
 async function giftIdeas(b: Extract<Action, { action: 'gift_ideas' }>) {
-  const userMsg = `Suggest 5 gift ideas for this person. Return STRICT JSON matching the schema.
+  // Two prompt paths. When interest_tags is supplied (shared-cache mode),
+  // we MUST NOT reference full_name or notes — the result lands in a
+  // cross-user row, so every prompt input becomes part of what other
+  // users effectively see. Sanitized prompt is purely shape-based.
+  const sharedMode = Array.isArray(b.interest_tags) && b.interest_tags.length > 0;
+  const userMsg = sharedMode
+    ? `Suggest 5 gift ideas. Generic — do not invent or assume a name. Return STRICT JSON.
+
+Recipient relationship: ${b.person.relationship_type ?? 'friend'}
+Recipient interests: ${b.interest_tags!.join(', ')}
+Budget: ${b.budget ? `~$${b.budget}` : 'flexible'}
+Occasion: ${b.occasion ?? 'general'}`
+    : `Suggest 5 gift ideas for this person. Return STRICT JSON matching the schema.
 
 Person: ${b.person.full_name}
 Relationship: ${b.person.relationship_type ?? 'unspecified'}
@@ -511,6 +523,14 @@ function sanitizeParams(body: Action): Record<string, unknown> {
         budget: body.budget ?? null,
         location: body.location ?? null,
         interests_count: (body.shared_interests ?? []).length,
+      };
+    case 'gift_ideas':
+      return {
+        action: body.action,
+        relationship_type: body.person.relationship_type ?? null,
+        budget: body.budget ?? null,
+        occasion: body.occasion ?? null,
+        tags_count: (body.interest_tags ?? []).length,
       };
     default:
       return { action: body.action };

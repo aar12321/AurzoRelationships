@@ -42,12 +42,23 @@ export default function ComposerPage() {
 
   // Recent message history for the selected person — shows the last 5 sent
   // outreach so the user can see the rhythm of their reach-outs at a glance
-  // without leaving the composer.
+  // without leaving the composer. Also seeds (occasion, tone, channel)
+  // from the most recent sent message so the composer remembers what the
+  // user actually picked last time for this person.
   useEffect(() => {
     if (!pid) { setHistory([]); return; }
     let cancelled = false;
     listMessages(pid)
-      .then((rows) => { if (!cancelled) setHistory(rows.slice(0, 5)); })
+      .then((rows) => {
+        if (cancelled) return;
+        setHistory(rows.slice(0, 5));
+        const last = rows.find((r) => r.sent_at);
+        if (last) {
+          setOccasion(last.occasion);
+          setTone(last.tone);
+          setChannel(last.channel);
+        }
+      })
       .catch(() => { if (!cancelled) setHistory([]); });
     return () => { cancelled = true; };
   }, [pid]);

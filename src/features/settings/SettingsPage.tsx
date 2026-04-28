@@ -11,6 +11,7 @@ import type { AurzoApp, AurzoProfile } from '@/types/core';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
 import { useTourStore } from '@/stores/tourStore';
 import { toast } from '@/stores/toastStore';
+import NotificationPrefsPanel from './NotificationPrefsPanel';
 
 export default function SettingsPage() {
   const { user, logout } = useAuthStore();
@@ -126,6 +127,8 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+
+        <NotificationPrefsPanel />
 
         <div className="card-journal">
           <h2 className="font-serif text-2xl mb-3">Your Aurzo id</h2>

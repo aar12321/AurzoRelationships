@@ -48,11 +48,46 @@ function dateCtx(d: ImportantDate) {
 // edits don't thrash the cache. TTLs chosen to match spec intent: evergreen
 // for things that don't change (gift ideas), short for conversational calls.
 
+// Two-tier gift_ideas. When we can extract at least one interest tag from
+// the person's notes / life_context, we route through the cross-user
+// shared cache with a sanitized fingerprint (relationship_type + tags +
+// budget bucket + occasion — no names, no notes). The server uses a
+// name-free prompt in that case, so the cached result is reusable for
+// any other user with the same shape. Otherwise we fall back to the
+// per-user cache and the original personalized prompt.
 export async function aiGiftIdeas(
   person: Person,
   budget?: number,
   occasion?: string,
 ): Promise<GiftIdea[]> {
+  const tags = extractInterestTags(person);
+  if (tags.length >= 1) {
+    const fingerprint = {
+      relationship_type: person.relationship_type ?? 'friend',
+      budget_bucket: budgetBucket(budget),
+      occasion: (occasion ?? 'general').toLowerCase().trim(),
+      interest_tags: tags,
+    };
+    return cachedAiShared(
+      { action: 'gift_ideas', params: fingerprint },
+      async (cacheSharedKey) => {
+        const r = await invoke<{ ideas: GiftIdea[] }>({
+          action: 'gift_ideas',
+          // Sanitized payload — server must NOT see notes/full_name when
+          // shared cache is active, since the result lands in a row that
+          // any other user can read.
+          person: { relationship_type: person.relationship_type ?? null },
+          interest_tags: tags,
+          budget, occasion,
+          cache_shared_key: cacheSharedKey,
+          cache_shared_action: 'gift_ideas',
+          cache_shared_ttl_ms: TTL.day7,
+        });
+        return r.ideas ?? [];
+      },
+    );
+  }
+
   return cachedAi(
     {
       action: 'gift_ideas',
@@ -66,6 +101,41 @@ export async function aiGiftIdeas(
       return r.ideas ?? [];
     },
   );
+}
+
+// Crude interest-tag extractor. Pulls 4+ letter tokens from the person's
+// free-text fields, drops a small stopword list, dedupes, sorts so the
+// fingerprint is order-independent, caps at 5 so the cache key stays
+// bounded. Imperfect — two users describing the same friend may pick
+// different words — but good enough as a v1 cross-user dedup signal.
+function extractInterestTags(p: Person): string[] {
+  const text = [
+    p.notes ?? '',
+    p.life_context?.job ?? '',
+    p.life_context?.major_events ?? '',
+  ].join(' ').toLowerCase();
+  const STOPWORDS = new Set([
+    'the','and','for','with','that','this','they','have','from','your',
+    'their','them','then','than','some','more','most','very','just','about',
+    'into','also','been','being','were','will','would','could','should','what',
+    'when','where','which','because','since','years','year','really','always',
+    'never','still','want','wants','wanted','really','kind','like','likes','loves',
+  ]);
+  const words = text.split(/[^a-z]+/).filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const w of words) {
+    if (!seen.has(w)) { seen.add(w); out.push(w); }
+    if (out.length >= 5) break;
+  }
+  return out.sort();
+}
+
+function budgetBucket(b?: number): 'low' | 'medium' | 'high' | 'any' {
+  if (b == null) return 'any';
+  if (b < 30) return 'low';
+  if (b < 100) return 'medium';
+  return 'high';
 }
 
 // Date ideas have a clean public-shape input — sorted shared interest
