@@ -54,7 +54,16 @@ export async function linkPeople(
   personIds: string[],
   ownerId: string,
 ): Promise<void> {
-  await supabase.from('memory_people').delete().eq('memory_id', memoryId);
+  // Belt-and-braces: RLS on memory_people already locks rows to the owner,
+  // but pinning owner_id on the delete means a forged memoryId from a
+  // different user can't widen the affected set even if a future schema
+  // change loosens the policy.
+  const { error: dErr } = await supabase
+    .from('memory_people')
+    .delete()
+    .eq('memory_id', memoryId)
+    .eq('owner_id', ownerId);
+  if (dErr) throw dErr;
   if (personIds.length === 0) return;
   const rows = personIds.map((pid) => ({
     memory_id: memoryId,
