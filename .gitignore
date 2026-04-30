@@ -13,3 +13,5 @@ coverage
 !.vscode/extensions.json
 .idea
 *.tsbuildinfo
+supabase/.temp/
+supabase/.branches/
