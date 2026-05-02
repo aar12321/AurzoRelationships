@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useGiftsStore } from '@/stores/giftsStore';
 import { usePeopleStore } from '@/stores/peopleStore';
@@ -14,7 +14,13 @@ export default function PersonGiftsPage() {
   const { id } = useParams();
   const people = usePeopleStore((s) => s.people);
   const loadPeople = usePeopleStore((s) => s.loadAll);
-  const { ideas, given, load, addIdea } = useGiftsStore();
+  // Narrow store subscription: select each slice individually so an
+  // unrelated store update (e.g. a different person's add) doesn't
+  // re-render this page.
+  const ideas = useGiftsStore((s) => s.ideas);
+  const given = useGiftsStore((s) => s.given);
+  const load = useGiftsStore((s) => s.load);
+  const addIdea = useGiftsStore((s) => s.addIdea);
   const [showAdd, setShowAdd] = useState(false);
   const [aiIdeas, setAiIdeas] = useState<AiIdea[] | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -25,14 +31,29 @@ export default function PersonGiftsPage() {
   }, [loadPeople, load, people.length, ideas.length, given.length]);
 
   const person = people.find((p) => p.id === id);
-  if (!person) return <div className="text-charcoal-500 text-sm">Loading…</div>;
 
-  const personIdeas = ideas.filter((i) => i.person_id === person.id);
-  const personGiven = given.filter((g) => g.person_id === person.id);
-  const suggestions = draftIdeas(
-    person.full_name.split(' ')[0],
-    person.notes ?? person.life_context?.job ?? '',
+  // Memoize the per-person filters so toggling unrelated state on the
+  // page (or other gift-store updates for a different person) doesn't
+  // re-walk the full ideas/given arrays on every render.
+  const personIdeas = useMemo(
+    () => (person ? ideas.filter((i) => i.person_id === person.id) : []),
+    [ideas, person?.id],
   );
+  const personGiven = useMemo(
+    () => (person ? given.filter((g) => g.person_id === person.id) : []),
+    [given, person?.id],
+  );
+  const suggestions = useMemo(
+    () => (person
+      ? draftIdeas(
+          person.full_name.split(' ')[0],
+          person.notes ?? person.life_context?.job ?? '',
+        )
+      : []),
+    [person?.id, person?.full_name, person?.notes, person?.life_context?.job],
+  );
+
+  if (!person) return <div className="text-charcoal-500 text-sm">Loading…</div>;
 
   // TS doesn't preserve the `!person` narrow into function declarations —
   // capture a non-null alias so the handlers below don't need their own guards.

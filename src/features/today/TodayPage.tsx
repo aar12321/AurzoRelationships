@@ -60,7 +60,41 @@ export default function TodayPage() {
           ))}
         </ul>
       )}
+
+      <QuickCapture />
     </section>
+  );
+}
+
+function QuickCapture() {
+  // The morning-ritual launchpad. Five small affordances so the user can
+  // act on whatever they noticed above without hunting through the nav.
+  return (
+    <section aria-labelledby="qc-heading" className="mt-8">
+      <h2 id="qc-heading"
+          className="text-xs uppercase tracking-wider text-charcoal-500
+                     dark:text-charcoal-300 mb-2">
+        While you're here
+      </h2>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <QcLink to="/relationships/people" icon="👋" label="Reach out" />
+        <QcLink to="/relationships/memories" icon="📸" label="Capture a memory" />
+        <QcLink to="/relationships/dates" icon="📅" label="Add a date" />
+        <QcLink to="/relationships/gifts" icon="🎁" label="Gift idea" />
+        <QcLink to="/relationships/advisor" icon="✨" label="Ask the advisor" />
+      </div>
+    </section>
+  );
+}
+
+function QcLink({ to, icon, label }: { to: string; icon: string; label: string }) {
+  return (
+    <Link to={to}
+      className="card-journal flex flex-col items-center justify-center gap-1
+                 py-3 text-center hover:translate-y-[-1px] transition-transform">
+      <span className="text-2xl leading-none" aria-hidden>{icon}</span>
+      <span className="text-xs text-charcoal-700 dark:text-cream-100">{label}</span>
+    </Link>
   );
 }
 

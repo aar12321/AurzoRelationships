@@ -2,19 +2,25 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { usePeopleStore } from '@/stores/peopleStore';
-import type { Channel, Occasion, Tone } from '@/types/outreach';
+import { useInteractionsStore } from '@/stores/interactionsStore';
+import type { Channel, Occasion, OutreachMessage, Tone } from '@/types/outreach';
 import {
   CHANNEL_LABELS, OCCASION_LABELS, TONE_LABELS,
 } from '@/types/outreach';
-import { draftVariants, saveMessage } from '@/services/outreachService';
+import type { InteractionKind } from '@/types/interactions';
+import { draftVariants, listMessages, saveMessage } from '@/services/outreachService';
 import { aiCompose } from '@/services/aiService';
+import { toast } from '@/stores/toastStore';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
+import RecentMessages from './RecentMessages';
 
 export default function ComposerPage() {
   const { id } = useParams();
   const { user } = useAuthStore();
   const people = usePeopleStore((s) => s.people);
   const loadPeople = usePeopleStore((s) => s.loadAll);
+
+  const logInteraction = useInteractionsStore((s) => s.log);
 
   const [pid, setPid] = useState<string>(id ?? '');
   const [occasion, setOccasion] = useState<Occasion>('thinking_of_you');
@@ -23,14 +29,43 @@ export default function ComposerPage() {
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
   const [variants, setVariants] = useState<string[]>([]);
+  const [sentVariants, setSentVariants] = useState<Set<number>>(new Set());
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [history, setHistory] = useState<OutreachMessage[]>([]);
 
   useEffect(() => {
     if (people.length === 0) void loadPeople();
   }, [loadPeople, people.length]);
 
   const person = useMemo(() => people.find((p) => p.id === pid), [people, pid]);
+
+  // Recent message history for the selected person — shows the last 5 sent
+  // outreach so the user can see the rhythm of their reach-outs at a glance
+  // without leaving the composer. Also seeds (occasion, tone, channel)
+  // from the most recent sent message so the composer remembers what the
+  // user actually picked last time for this person.
+  useEffect(() => {
+    if (!pid) { setHistory([]); return; }
+    let cancelled = false;
+    listMessages(pid)
+      .then((rows) => {
+        if (cancelled) return;
+        setHistory(rows.slice(0, 5));
+        const last = rows.find((r) => r.sent_at);
+        if (last) {
+          setOccasion(last.occasion);
+          setTone(last.tone);
+          setChannel(last.channel);
+        }
+      })
+      .catch(() => { if (!cancelled) setHistory([]); });
+    return () => { cancelled = true; };
+  }, [pid]);
+
+  // Reset per-variant "sent" markers whenever the drafted set changes —
+  // a new occasion/tone/channel produces fresh variants the user hasn't sent.
+  useEffect(() => { setSentVariants(new Set()); }, [variants]);
 
   useEffect(() => {
     if (!person) { setVariants([]); return; }
@@ -52,17 +87,35 @@ export default function ComposerPage() {
     try {
       await navigator.clipboard.writeText(body);
       setCopied(true);
+      toast.success('Copied to clipboard.');
       setTimeout(() => setCopied(false), 1500);
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('Could not copy — paste it manually from the card.');
+    }
   }
 
-  async function markSent(body: string) {
-    if (!user || !person) return;
-    await saveMessage({
-      person_id: person.id,
-      occasion, tone, channel, body,
-      sent_at: new Date().toISOString(),
-    }, user.id);
+  async function markSent(body: string, idx: number) {
+    if (!user || !person || sentVariants.has(idx)) return;
+    try {
+      const row = await saveMessage({
+        person_id: person.id,
+        occasion, tone, channel, body,
+        sent_at: new Date().toISOString(),
+      }, user.id);
+      // Reach-outs are real interactions — log one so streaks, last_contacted_at,
+      // and the relationship-strength signal all update without a separate step.
+      await logInteraction({
+        person_id: person.id,
+        kind: channelToInteractionKind(channel),
+        quality: 'quick',
+        notes: `${OCCASION_LABELS[occasion]} (${TONE_LABELS[tone]})`,
+      }, user.id);
+      setSentVariants((prev) => new Set(prev).add(idx));
+      setHistory((prev) => [row, ...prev].slice(0, 5));
+      toast.success(`Logged your message to ${person.full_name.split(' ')[0]}.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save.');
+    }
   }
 
   return (
@@ -147,8 +200,10 @@ export default function ComposerPage() {
               {variants[active]}
             </pre>
             <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-cream-200">
-              <button className="btn-ghost" onClick={() => void markSent(variants[active])}>
-                I sent this
+              <button className="btn-ghost"
+                disabled={sentVariants.has(active)}
+                onClick={() => void markSent(variants[active], active)}>
+                {sentVariants.has(active) ? 'Sent ✓' : 'I sent this'}
               </button>
               <button className="btn-primary" onClick={() => void copy(variants[active])}>
                 {copied ? 'Copied' : 'Copy'}
@@ -157,6 +212,20 @@ export default function ComposerPage() {
           </div>
         </>
       )}
+
+      {person && <RecentMessages messages={history} />}
     </section>
   );
+}
+
+function channelToInteractionKind(channel: Channel): InteractionKind {
+  switch (channel) {
+    case 'letter':     return 'letter';
+    case 'voice_note': return 'call';
+    case 'email':
+    case 'text':
+    case 'imessage':
+    case 'whatsapp':
+    default:           return 'text';
+  }
 }

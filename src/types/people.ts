@@ -17,6 +17,10 @@ export type CommunicationPref =
   | 'letter'
   | 'no_preference';
 
+export type PriorityTier = 'inner' | 'close' | 'casual';
+
+export type SocialCapacity = 'low' | 'steady' | 'high';
+
 export type CustomField = { label: string; value: string };
 
 export type LifeContext = {
@@ -43,6 +47,10 @@ export type Person = {
   custom_fields: CustomField[];
   fading_threshold_days: number | null;
   last_contacted_at: string | null;
+  priority_tier: PriorityTier | null;
+  cadence_days: number | null;
+  do_not_nudge_until: string | null;
+  social_capacity: SocialCapacity | null;
   created_at: string;
   updated_at: string;
 };
@@ -85,6 +93,18 @@ export const COMMUNICATION_PREF_LABELS: Record<CommunicationPref, string> = {
   video: 'Video',
   letter: 'Letters',
   no_preference: 'No preference',
+};
+
+export const PRIORITY_TIER_LABELS: Record<PriorityTier, string> = {
+  inner: 'Inner circle',
+  close: 'Close',
+  casual: 'Casual',
+};
+
+export const SOCIAL_CAPACITY_LABELS: Record<SocialCapacity, string> = {
+  low: 'Low — space me out',
+  steady: 'Steady',
+  high: 'High — I want to invest here',
 };
 
 export type Strength = 'thriving' | 'active' | 'fading' | 'dormant' | 'unknown';
