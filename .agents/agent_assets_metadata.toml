@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "E1GXTmQ4swb7vsSPQfF56"
+uri = "file://AUDIT_REPORT.md"
+type = "text"
+title = "Aurzo Relationship OS — Full Audit"

@@ -11,12 +11,12 @@ channel = "stable-24_05"
 VITE_HOST = "0.0.0.0"
 
 [[ports]]
-localPort = 5173
-externalPort = 80
-
-[[ports]]
 localPort = 4173
 externalPort = 3000
+
+[[ports]]
+localPort = 5173
+externalPort = 80
 
 # Autoscale deployment — Replit spins up vite preview to serve `dist/`.
 # For a pure SPA you could also pick "static" in the UI (cheaper, no server);

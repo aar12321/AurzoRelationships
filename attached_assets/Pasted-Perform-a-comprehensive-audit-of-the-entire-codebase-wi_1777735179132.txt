@@ -1,0 +1,51 @@
+Perform a comprehensive audit of the entire codebase with a heavy emphasis on real-world user testing and end-to-end feature validation. Don't just scan code — mentally (or actually) walk through every user flow as if you were a real user, then back that up with code-level analysis.
+Phase 1: Feature inventory
+Before reviewing, list every user-facing feature and flow you can identify in the codebase. Group them by user role (anonymous, authenticated, admin, etc.). Confirm this list looks complete before moving on — flag anything that seems half-built, orphaned, or referenced but not implemented.
+Phase 2: User flow testing
+For each feature, simulate the full user journey step by step. For every flow, ask:
+
+Can a user actually complete this end-to-end without hitting a dead end?
+What happens on the happy path? What happens when they do it "wrong"?
+What happens if they refresh mid-flow, hit back, open in a new tab, or lose connection?
+What happens with empty data, maximum data, slow networks, expired sessions?
+Can they get stuck in a state with no way out?
+Are loading, empty, error, and success states all present and correct?
+Does the UI match what the backend actually did (e.g., optimistic updates that lie)?
+Can actions be double-submitted, double-clicked, or replayed?
+Is feedback clear when something fails? Does the user know what to do next?
+
+Test critical flows under adversarial conditions: invalid input, malicious input, permission boundaries (can user A see user B's data?), rate limits, concurrent actions.
+Phase 3: Logic & correctness review
+
+Business logic that doesn't match apparent intent or is internally inconsistent
+Conditionals, off-by-one errors, null/undefined handling, type coercion bugs
+Race conditions, unhandled promise rejections, missing await
+State management (stale state, unnecessary re-renders, mutation bugs, sync issues between client and server)
+Edge cases: empty arrays, zero, negative numbers, very large inputs, unicode, timezones, DST, leap years
+Validation gaps on both client and server
+
+Phase 4: Integration & data layer
+
+API contract mismatches between frontend and backend
+Auth/permission checks missing, inconsistent, or bypassable
+Database queries with N+1 issues, missing indexes, wrong joins, missing transactions
+Error handling: silent failures, swallowed exceptions, generic error messages
+Third-party integrations: what happens when they're down, slow, or return unexpected data?
+
+Phase 5: Cross-cutting concerns
+
+Accessibility: keyboard nav, screen readers, focus management, color contrast
+Mobile: touch targets, viewport, orientation, virtual keyboard behavior
+Browser compat issues that would actually affect users
+Performance issues a user would feel (slow first load, janky scroll, blocking requests)
+Security: XSS, CSRF, injection, exposed secrets, IDOR, broken auth
+
+Output format:
+For each issue:
+
+Feature/flow affected (the user-facing thing that breaks)
+Reproduction steps as a user would experience them
+File path and line number(s) in the code
+Severity: critical (blocks core flow / security / data loss) / high (degrades core flow) / medium (edge case or polish) / low (minor)
+Root cause: what's actually wrong in the code
+Suggested fix: code snippet if small, approach if large
