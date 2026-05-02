@@ -5,9 +5,16 @@ import type { BucketItem, CoupleCheckin, PartnerLink } from '@/types/couples';
 const shared = supabase.schema('shared_data');
 
 export async function myLink(): Promise<PartnerLink | null> {
+  // Order + limit + maybeSingle: a user can legitimately have more than
+  // one partner_links row over time (proposals that were never accepted,
+  // revoked links that were re-proposed). Without ordering, .maybeSingle()
+  // throws a multi-row error and the Couples page renders blank. Take the
+  // most recent row — that's the one the UI is actually about.
   const { data, error } = await shared
     .from('partner_links')
     .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error && error.code !== 'PGRST116') throw error;
   return (data as PartnerLink | null) ?? null;
@@ -30,17 +37,14 @@ export async function proposeLink(
   return data as PartnerLink;
 }
 
-export async function acceptLink(
-  linkId: string,
-  side: 'a' | 'b',
-): Promise<PartnerLink> {
-  const field = side === 'a' ? 'a_consented_at' : 'b_consented_at';
-  const { data, error } = await shared
-    .from('partner_links')
-    .update({ [field]: new Date().toISOString() })
-    .eq('id', linkId)
-    .select()
-    .single();
+export async function acceptLink(linkId: string): Promise<PartnerLink> {
+  // The "side" (`a` vs `b`) is no longer a client argument at any layer.
+  // Authorization happens in the database: the accept_partner_link RPC
+  // is SECURITY DEFINER and reads auth.uid() to decide which consent
+  // column it's allowed to touch. The broad UPDATE policy on
+  // partner_links was removed in migration 0015 so direct table updates
+  // can no longer be used to set the other party's consent.
+  const { data, error } = await shared.rpc('accept_partner_link', { p_link: linkId });
   if (error) throw error;
   return data as PartnerLink;
 }

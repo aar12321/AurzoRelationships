@@ -32,8 +32,13 @@ export default function CouplesPage() {
 
   async function accept() {
     if (!user || !link) return;
-    const side = link.user_a === user.id ? 'a' : 'b';
-    setLink(await acceptLink(link.id, side));
+    // Side is now inferred server-side from auth.uid() — see
+    // couplesService.acceptLink for why we don't pass it.
+    try {
+      setLink(await acceptLink(link.id));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not accept link.');
+    }
   }
 
   async function revoke() {

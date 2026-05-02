@@ -63,13 +63,11 @@ Deno.serve(async (req) => {
     const raw = await req.json() as Record<string, unknown> & Action;
     const body: Action = raw;
 
-    // Optional shared-cache write-through hints. Clients ask the server to
-    // record the fresh result into aurzo_core.ai_cache_shared by passing a
-    // sanitized cache key + logical action. Writes use the service role so
-    // RLS on the shared table can stay locked down (clients can SELECT but
-    // can't INSERT/UPDATE/DELETE — see migration 0013).
-    const cacheSharedKey = typeof raw.cache_shared_key === 'string'
-      ? raw.cache_shared_key : null;
+    // Optional shared-cache write-through hints. Clients tell the server
+    // which logical action to record under, but they NEVER get to set the
+    // cache key — we recompute it server-side from a trusted fingerprint
+    // of the body so a hostile client can't poison cross-user rows by
+    // supplying a key whose contents don't match the inputs.
     const cacheSharedAction = typeof raw.cache_shared_action === 'string'
       ? raw.cache_shared_action : null;
     const cacheSharedTtlMs = typeof raw.cache_shared_ttl_ms === 'number'
@@ -109,16 +107,20 @@ Deno.serve(async (req) => {
     const result = await handle(body);
 
     // Shared cache write-through. Best-effort; we never fail the user's
-    // request if the cache write trips. Skipped when the caller didn't
-    // ask for it (cache_shared_key / cache_shared_action both required).
-    if (cacheSharedKey && cacheSharedAction) {
-      void writeSharedCache(
-        cacheSharedAction,
-        cacheSharedKey,
-        body,
-        result,
-        cacheSharedTtlMs,
-      );
+    // request if the cache write trips. The key is computed server-side
+    // from a trusted fingerprint of the body — never trust a client-
+    // supplied key here, since this row is visible cross-user.
+    if (cacheSharedAction) {
+      const serverKey = await buildSharedCacheKey(body);
+      if (serverKey) {
+        void writeSharedCache(
+          cacheSharedAction,
+          serverKey,
+          body,
+          result,
+          cacheSharedTtlMs,
+        );
+      }
     }
 
     return json(result, 200, cors);
@@ -448,6 +450,11 @@ async function advise(b: Extract<Action, { action: 'advise' }>) {
 
 // ---------- helpers ----------
 
+// Forced tool-use is the supported way to get strict-shape JSON out of
+// Claude. We declare a single tool whose input_schema is the JSON Schema
+// we want, then force the model to call it. The tool_use block's `input`
+// is already a parsed object — no string parsing, no malformed JSON, no
+// hallucinated prose around the payload.
 async function callJson(
   model: string,
   userMsg: string,
@@ -459,8 +466,17 @@ async function callJson(
     max_tokens: maxTokens,
     system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: userMsg }],
-    output_config: { format: { type: 'json_schema', schema } },
+    // deno-lint-ignore no-explicit-any
+    tools: [{ name: 'respond', description: 'Respond with the structured payload.', input_schema: schema as any }],
+    tool_choice: { type: 'tool', name: 'respond' },
   });
+  for (const block of resp.content) {
+    if (block.type === 'tool_use' && block.name === 'respond') {
+      return block.input as unknown;
+    }
+  }
+  // Fallback: model went off-script and returned text. Try to parse it,
+  // otherwise hand the raw payload back so the client can show something.
   const text = textOf(resp);
   try { return JSON.parse(text); } catch { return { _raw: text }; }
 }
@@ -555,10 +571,117 @@ function json(body: unknown, status: number, cors: Record<string, string>): Resp
   });
 }
 
-function corsHeaders(_req: Request): Record<string, string> {
-  return {
-    'Access-Control-Allow-Origin': '*',
+// CORS allow-list. Echoes the request Origin only if it matches one of:
+//   - localhost / 127.0.0.1 (any port) for local dev
+//   - *.replit.app, *.replit.dev for Replit-hosted previews + production
+//   - REPLIT_DEV_DOMAIN injected by the workspace
+//   - any host listed in ALLOWED_ORIGINS (comma-separated, exact match)
+// Anything else gets no Access-Control-Allow-Origin header at all,
+// which is the cleanest CORS denial — browsers will block the response.
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('Origin') ?? '';
+  const headers: Record<string, string> = {
+    'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Max-Age': '86400',
   };
+  // Echo the Origin only when it's on our allow-list. For everything
+  // else we omit Access-Control-Allow-Origin entirely — that's a clean
+  // CORS denial. (Returning the literal string 'null' would technically
+  // grant access to file:// / sandboxed-iframe contexts, which we
+  // never want.)
+  if (isAllowedOrigin(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  try {
+    const u = new URL(origin);
+    const host = u.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+    if (host.endsWith('.replit.app') || host.endsWith('.replit.dev')) return true;
+    const replitDevDomain = (Deno.env.get('REPLIT_DEV_DOMAIN') ?? '').toLowerCase();
+    if (replitDevDomain && host === replitDevDomain) return true;
+    const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+      .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (allowed.includes(origin.toLowerCase()) || allowed.includes(host)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// Server-side shared-cache key derivation. Mirrors the client-side
+// canonicalization in src/services/aiCache.ts so that a fresh write and
+// a follow-up read produce the same SHA-256 key. We intentionally only
+// include fields the server knows are non-PII for each shared action.
+async function buildSharedCacheKey(body: Action): Promise<string | null> {
+  const fp = serverFingerprint(body);
+  if (!fp) return null;
+  const payload = canonicalize({ action: fp.action, params: fp.params });
+  const buf = new TextEncoder().encode(payload);
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function serverFingerprint(
+  body: Action,
+): { action: string; params: Record<string, unknown> } | null {
+  if (body.action === 'gift_ideas') {
+    const tags = (body.interest_tags ?? [])
+      .map((t) => String(t).toLowerCase().trim())
+      .filter(Boolean);
+    if (tags.length === 0) return null; // shared cache requires tags
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    for (const t of tags) {
+      if (!seen.has(t)) { seen.add(t); unique.push(t); }
+      if (unique.length >= 5) break;
+    }
+    return {
+      action: 'gift_ideas',
+      params: {
+        relationship_type: body.person.relationship_type ?? 'friend',
+        budget_bucket: budgetBucket(body.budget),
+        occasion: (body.occasion ?? 'general').toLowerCase().trim(),
+        interest_tags: unique.sort(),
+      },
+    };
+  }
+  if (body.action === 'date_ideas') {
+    return {
+      action: 'date_ideas',
+      params: {
+        interests: (body.shared_interests ?? [])
+          .map((s) => String(s).trim().toLowerCase())
+          .filter(Boolean)
+          .sort(),
+        budget: body.budget ?? null,
+        location: body.location ? body.location.trim().toLowerCase() : null,
+      },
+    };
+  }
+  return null;
+}
+
+function budgetBucket(b: number | undefined): 'low' | 'medium' | 'high' | 'any' {
+  if (b == null) return 'any';
+  if (b < 30) return 'low';
+  if (b < 100) return 'medium';
+  return 'high';
+}
+
+function canonicalize(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(canonicalize).join(',') + ']';
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  return '{' + keys.map((k) => JSON.stringify(k) + ':' + canonicalize(obj[k])).join(',') + '}';
 }

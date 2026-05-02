@@ -12,6 +12,7 @@ import { useCaptureMomentStore } from '@/stores/captureMomentStore';
 import { useMemoriesStore } from '@/stores/memoriesStore';
 import { usePeopleStore } from '@/stores/peopleStore';
 import { uploadMemoryPhoto } from '@/services/memoriesService';
+import { toast } from '@/stores/toastStore';
 import type { MemoryType } from '@/types/memories';
 import { MEMORY_TYPE_EMOJI, MEMORY_TYPE_LABELS } from '@/types/memories';
 
@@ -62,7 +63,11 @@ export default function CaptureMomentModal() {
     setBusy(true); setErr(null);
     try {
       let photoUrl: string | null = null;
-      if (photo) photoUrl = await uploadMemoryPhoto(photo, user.id);
+      let photoFailed = false;
+      if (photo) {
+        photoUrl = await uploadMemoryPhoto(photo, user.id);
+        photoFailed = photoUrl == null;
+      }
       await add({
         title: title.trim() || null,
         note:  note.trim()  || null,
@@ -71,6 +76,12 @@ export default function CaptureMomentModal() {
         photo_urls: photoUrl ? [photoUrl] : [],
         person_ids: tagged,
       }, user.id);
+      // The memory itself saved — but if the user added a photo and it
+      // failed silently we surface it now so they know it's missing
+      // before they leave the form.
+      if (photoFailed) {
+        toast.error('Saved, but the photo failed to upload.');
+      }
       closeCapture();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save');

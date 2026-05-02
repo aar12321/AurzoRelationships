@@ -71,7 +71,7 @@ export default function OnboardingFlow({ onDone }: { onDone: () => void }) {
     try {
       await createDate({
         person_id: createdPersonId,
-        label: `${name.split(' ')[0]}'s birthday`,
+        label: `${firstName(name) || 'Their'}'s birthday`,
         date_type: 'birthday',
         event_date: birthday,
         recurring: true,
@@ -133,7 +133,7 @@ export default function OnboardingFlow({ onDone }: { onDone: () => void }) {
           <div className="flex gap-3">
             <button onClick={() => void saveFirstPerson()}
               disabled={busy || !name.trim()} className="btn-primary">
-              Add {name.split(' ')[0] || 'them'}
+              Add {firstName(name) || 'them'}
             </button>
             <button onClick={() => void finish()} disabled={busy} className="btn-ghost">
               Skip
@@ -170,7 +170,7 @@ export default function OnboardingFlow({ onDone }: { onDone: () => void }) {
           </p>
           <div className="flex gap-3">
             <button onClick={() => void finish(true)} disabled={busy} className="btn-primary">
-              Open {name.split(' ')[0] || 'their profile'}
+              Open {firstName(name) || 'their profile'}
             </button>
             <button onClick={() => void finish()} disabled={busy} className="btn-ghost">
               Back to home
@@ -184,6 +184,14 @@ export default function OnboardingFlow({ onDone }: { onDone: () => void }) {
 
 function Card({ children }: { children: React.ReactNode }) {
   return <div className="card-journal p-7">{children}</div>;
+}
+
+// Trim + collapse runs of whitespace, then take the first token. The
+// previous `name.split(' ')[0]` returned an empty string for inputs like
+// `"  Alex"` (leading whitespace) or `"Alex\tChen"` (a tab), which then
+// led to labels rendering as just `'s birthday`.
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? '';
 }
 
 function Progress({ step }: { step: number }) {

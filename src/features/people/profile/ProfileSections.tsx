@@ -48,11 +48,15 @@ export function StorySection({ person }: { person: Person }) {
 
 export function LifeContextSection({ person }: { person: Person }) {
   const ctx = person.life_context ?? {};
+  // life_context is a jsonb column with no schema enforcement — older
+  // rows may contain numbers, booleans, even nulls in these slots. React
+  // throws if you try to render anything but strings/numbers as a child,
+  // so coerce defensively here rather than crashing the whole profile.
   const rows = [
-    ctx.job && ['Work', ctx.job],
-    ctx.relationship_status && ['Relationship', ctx.relationship_status],
-    ctx.kids && ['Family', ctx.kids],
-    ctx.major_events && ['Recent events', ctx.major_events],
+    ctx.job && ['Work', String(ctx.job)],
+    ctx.relationship_status && ['Relationship', String(ctx.relationship_status)],
+    ctx.kids && ['Family', String(ctx.kids)],
+    ctx.major_events && ['Recent events', String(ctx.major_events)],
   ].filter(Boolean) as [string, string][];
   return (
     <Section

@@ -105,8 +105,23 @@ export default function EditPersonPage() {
     if (!user || !form || !person) return;
     setBusy(true); setError(null);
     try {
-      const cadence = form.cadence_days.trim();
-      const cadenceParsed = cadence === '' ? null : Math.max(1, Math.min(365, parseInt(cadence, 10)));
+      // Cadence: parse first, then validate. The previous shape clamped
+      // BEFORE the NaN guard, so non-numeric input silently became 1
+      // (Math.max(1, NaN) is NaN, but the truthiness check above let it
+      // through anyway). Now we explicitly reject NaN.
+      const cadenceRaw = form.cadence_days.trim();
+      let cadence_days: number | null = null;
+      if (cadenceRaw !== '') {
+        const n = parseInt(cadenceRaw, 10);
+        if (Number.isFinite(n)) cadence_days = Math.max(1, Math.min(365, n));
+      }
+      // do_not_nudge_until: the input gives us YYYY-MM-DD in the user's
+      // local TZ. `new Date('YYYY-MM-DD')` parses as UTC midnight, which
+      // can land yesterday in the user's local time and unmute nudges
+      // a day early. Anchor at end-of-day local instead.
+      const doNotNudge = form.do_not_nudge_until
+        ? new Date(`${form.do_not_nudge_until}T23:59:59`).toISOString()
+        : null;
       const patch: Partial<PersonInput> = {
         full_name: form.full_name.trim(),
         relationship_type: form.relationship_type || null,
@@ -117,10 +132,8 @@ export default function EditPersonPage() {
         relationship_goal: form.relationship_goal || null,
         communication_pref: form.communication_pref || null,
         priority_tier: form.priority_tier || null,
-        cadence_days: cadenceParsed && !Number.isNaN(cadenceParsed) ? cadenceParsed : null,
-        do_not_nudge_until: form.do_not_nudge_until
-          ? new Date(form.do_not_nudge_until).toISOString()
-          : null,
+        cadence_days,
+        do_not_nudge_until: doNotNudge,
         social_capacity: form.social_capacity || null,
       };
       await update(person.id, patch);

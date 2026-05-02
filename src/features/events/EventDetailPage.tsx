@@ -96,7 +96,7 @@ export default function EventDetailPage() {
           {ev.event_type && EVENT_TYPE_LABELS[ev.event_type]}
           {ev.starts_at && <> · {new Date(ev.starts_at).toLocaleString()}</>}
           {ev.location && <> · {ev.location}</>}
-          {ev.budget != null && <> · budget ${ev.budget.toFixed(0)}</>}
+          {ev.budget != null && <> · budget ${Number(ev.budget).toFixed(0)}</>}
         </div>
         {ev.notes && <p className="text-charcoal-700 mt-3">{ev.notes}</p>}
       </header>

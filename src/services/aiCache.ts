@@ -31,11 +31,16 @@ export async function cachedAi<T>(
 
   const key = await buildCacheKey(opts.action, opts.params);
 
-  // 1. Lookup
+  // 1. Lookup. RLS already scopes to the current user, but the table's
+  // unique key is (user_id, platform, cache_key) — without an explicit
+  // user_id filter Supabase can return multiple rows when a user has the
+  // same cache_key under different (legacy) user_ids, which surfaces as
+  // a misleading multi-row error from .maybeSingle().
   const now = new Date().toISOString();
   const { data: hit } = await coreClient
     .from('ai_cache')
     .select('result, expires_at')
+    .eq('user_id', user.id)
     .eq('platform', PLATFORM_ID)
     .eq('cache_key', key)
     .maybeSingle();
@@ -117,9 +122,12 @@ export const TTL = {
 //
 // Privacy contract: callers MUST pass a fingerprint with no PII. Writes
 // happen server-side inside the aurzo-ai edge function with the service
-// role; clients can never write to this table directly. The fetcher is
-// expected to forward `cacheSharedKey` and `cacheSharedAction` to the
-// edge function so it knows where to record the response on a miss.
+// role; clients can never write to this table directly. The fetcher
+// receives the locally-computed cacheKey but does NOT forward it — the
+// server independently recomputes the canonical key from a trusted
+// fingerprint of the request body. Client and server fingerprints must
+// stay byte-identical (same fields, same normalization, same filtering)
+// so the local lookup key matches the server's write key.
 
 export type SharedCacheOptions = {
   action: string;       // logical action name, also stored in the row
@@ -152,7 +160,8 @@ export async function cachedAiShared<T>(
     return hit.result as T;
   }
 
-  // 2. Miss — fetcher must invoke the edge fn with cacheSharedKey so the
-  //    server-side write-through lands in the row keyed identically.
+  // 2. Miss — invoke the fetcher (which calls the edge fn). The fn
+  //    recomputes the canonical key server-side and writes through.
+  //    cacheKey is passed for callers that want to log/debug it.
   return fetcher(cacheKey);
 }

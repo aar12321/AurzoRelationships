@@ -27,18 +27,37 @@ export default function ConfirmModal({
   onConfirm, onCancel,
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    // Focus the primary CTA so Enter commits the action. A full focus trap
-    // would be overkill for a two-button dialog; tab order already loops
-    // between confirm + cancel naturally.
+    // Remember what was focused before so we can hand focus back when the
+    // dialog closes — important for screen-reader users and keyboard-only
+    // navigation.
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
     confirmRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) { e.preventDefault(); onCancel(); }
+      if (e.key === 'Escape' && !busy) { e.preventDefault(); onCancel(); return; }
+      // Manual focus trap — Tab cycles between cancel + confirm only,
+      // so focus can never escape into the (visually obscured) page
+      // behind the dialog.
+      if (e.key === 'Tab') {
+        const active = document.activeElement;
+        if (e.shiftKey && active === cancelRef.current) {
+          e.preventDefault();
+          confirmRef.current?.focus();
+        } else if (!e.shiftKey && active === confirmRef.current) {
+          e.preventDefault();
+          cancelRef.current?.focus();
+        }
+      }
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previouslyFocused.current?.focus?.();
+    };
   }, [open, busy, onCancel]);
 
   if (!open) return null;
@@ -68,6 +87,7 @@ export default function ConfirmModal({
         )}
         <div className="flex justify-end gap-2">
           <button
+            ref={cancelRef}
             onClick={onCancel}
             disabled={busy}
             className="btn-ghost border border-cream-200 dark:border-charcoal-700 text-sm"

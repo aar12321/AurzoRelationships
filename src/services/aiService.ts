@@ -70,7 +70,12 @@ export async function aiGiftIdeas(
     };
     return cachedAiShared(
       { action: 'gift_ideas', params: fingerprint },
-      async (cacheSharedKey) => {
+      // The fetcher receives the locally-computed cache key, but we no
+      // longer forward it — the server recomputes the canonical key
+      // from a trusted fingerprint of the body and writes under that.
+      // We keep the param name underscore-prefixed to make the unused-
+      // ness explicit (and to satisfy noUnusedParameters).
+      async (_cacheSharedKey) => {
         const r = await invoke<{ ideas: GiftIdea[] }>({
           action: 'gift_ideas',
           // Sanitized payload — server must NOT see notes/full_name when
@@ -79,7 +84,6 @@ export async function aiGiftIdeas(
           person: { relationship_type: person.relationship_type ?? null },
           interest_tags: tags,
           budget, occasion,
-          cache_shared_key: cacheSharedKey,
           cache_shared_action: 'gift_ideas',
           cache_shared_ttl_ms: TTL.day7,
         });
@@ -148,17 +152,25 @@ export async function aiDateIdeas(
   location?: string,
 ): Promise<DateIdea[]> {
   const fingerprint = {
-    interests: [...sharedInterests].map((s) => s.trim().toLowerCase()).sort(),
+    // filter(Boolean) so the client and server fingerprints stay in lock-
+    // step — the edge function's serverFingerprint() drops empties before
+    // hashing, and any divergence here would mean every fresh write lands
+    // under a different cache key than the client's lookup, leading to
+    // permanent misses.
+    interests: [...sharedInterests]
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+      .sort(),
     budget: budget ?? null,
     location: location?.trim().toLowerCase() ?? null,
   };
   return cachedAiShared(
     { action: 'date_ideas', params: fingerprint },
-    async (cacheSharedKey) => {
+    // See gift_ideas above — server recomputes the canonical cache key.
+    async (_cacheSharedKey) => {
       const r = await invoke<{ ideas: DateIdea[] }>({
         action: 'date_ideas',
         shared_interests: sharedInterests, budget, location,
-        cache_shared_key: cacheSharedKey,
         cache_shared_action: 'date_ideas',
         cache_shared_ttl_ms: TTL.day7,
       });
@@ -271,13 +283,19 @@ export async function aiAdviseStream(
   signal?: AbortSignal,
 ): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
+  // Streaming advise must be authenticated as the user — never fall back
+  // to the anon key, which would invoke the edge function as the bare
+  // anon role and bypass the supa.auth.getUser() identity check.
+  if (!session?.access_token) {
+    throw new Error('Sign in required to ask the advisor.');
+  }
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/aurzo-ai`, {
     method: 'POST',
     signal,
     headers: {
       'Content-Type': 'application/json',
       apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${session?.access_token ?? SUPABASE_KEY}`,
+      Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({
       action: 'advise',

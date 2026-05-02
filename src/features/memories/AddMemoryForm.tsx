@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useMemoriesStore } from '@/stores/memoriesStore';
 import { usePeopleStore } from '@/stores/peopleStore';
+import { uploadMemoryPhoto } from '@/services/memoriesService';
+import { toast } from '@/stores/toastStore';
 import type { MemoryType } from '@/types/memories';
 import { MEMORY_TYPE_EMOJI, MEMORY_TYPE_LABELS } from '@/types/memories';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
@@ -19,6 +21,8 @@ export default function AddMemoryForm({ personId, onDone }: Props) {
   const [when, setWhen] = useState('');
   const [loc, setLoc] = useState('');
   const [pids, setPids] = useState<string[]>(personId ? [personId] : []);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -26,20 +30,40 @@ export default function AddMemoryForm({ personId, onDone }: Props) {
     setPids((curr) => curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id]);
   }
 
+  function onPhoto(file: File | null) {
+    setPhoto(file);
+    if (!file) { setPreview(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
     setBusy(true); setErr(null);
     try {
+      // Upload the photo first so we can attach the URL on insert. A
+      // failed upload doesn't block the save — we just toast a warning
+      // and store the memory without it.
+      let photoUrl: string | null = null;
+      let photoFailed = false;
+      if (photo) {
+        photoUrl = await uploadMemoryPhoto(photo, user.id);
+        photoFailed = photoUrl == null;
+      }
       await add({
         title: title.trim() || null,
         note: note.trim() || null,
         memory_type: type,
         occurred_on: when || null,
         location: loc.trim() || null,
+        photo_urls: photoUrl ? [photoUrl] : [],
         person_ids: pids,
       }, user.id);
+      if (photoFailed) toast.error('Saved, but the photo failed to upload.');
       setTitle(''); setNote(''); setWhen(''); setLoc('');
+      setPhoto(null); setPreview(null);
       onDone?.();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Save failed');
@@ -86,6 +110,17 @@ export default function AddMemoryForm({ personId, onDone }: Props) {
               {p.full_name}
             </button>
           ))}
+        </div>
+      </FieldRow>
+      <FieldRow label="Photo" hint="Optional — one image.">
+        <div>
+          <input type="file" accept="image/*"
+            onChange={(e) => onPhoto(e.target.files?.[0] ?? null)}
+            className="block text-xs" />
+          {preview && (
+            <img src={preview} alt=""
+              className="mt-2 max-h-40 rounded-journal border border-cream-200 dark:border-charcoal-700" />
+          )}
         </div>
       </FieldRow>
       {err && <p className="text-sm text-terracotta-700">{err}</p>}

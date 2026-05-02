@@ -2,6 +2,38 @@
 
 **Scope:** comprehensive 5-phase audit (feature inventory, end-to-end flows, logic/correctness, integration/data, cross-cutting concerns).
 **Mode:** audit-only — no code changes were made.
+
+---
+
+## Resolution Status (2026-05-02)
+
+After the audit was delivered, the following critical/high/medium fixes were applied and shipped:
+
+| ID  | Issue (short) | Status |
+|-----|---------------|--------|
+| A1  | Edge fn `output_config` invalid → tool-use forced binding | ✅ Fixed + deployed |
+| A2  | `do_not_nudge_until` UTC-midnight off-by-a-day | ✅ Fixed (end-of-day local) |
+| A3  | `couplesService.myLink` `.maybeSingle` w/o filter | ✅ Fixed (order+limit) |
+| A4  | Edge fn CORS wildcard | ✅ Fixed (allow-list, deny = no ACAO) |
+| A5  | `aiAdviseStream` allowed anon | ✅ Fixed (auth required) |
+| A11 | Photo upload silent failure | ✅ Fixed (toast on failure) |
+| A12 | `AddMemoryForm` missing photo input | ✅ Fixed (input + preview added) |
+| A13 | Cadence `Number.isFinite` gate | ✅ Fixed |
+| A14 | `firstName` whitespace bug | ✅ Fixed (trim+collapse helper) |
+| A16 | `aiCache` missing user_id filter | ✅ Fixed (defense-in-depth) |
+| A18 | `acceptLink` accepted client-supplied side | ✅ Fixed at TWO layers: client infers from `auth.uid()`, AND DB now has `accept_partner_link` SECURITY DEFINER RPC; broad UPDATE policy on `partner_links` dropped (migration 0015) |
+| C1  | `ConfirmModal` no focus trap | ✅ Fixed (Tab cycles, focus restored on close) |
+| C11 | `ProfileSections` jsonb crash | ✅ Fixed (`String()` coercion) |
+| D1  | Client-controlled shared cache key | ✅ Fixed (server recomputes from trusted body fingerprint; client/server fingerprints byte-identical including `.filter(Boolean)`) |
+| D6  | `EventDetailPage.budget.toFixed` on string | ✅ Fixed (`Number()` coercion) |
+
+**Intentionally deferred** (acknowledged but not severe enough to block, or require larger schema/UX changes):
+C2 (combobox refinement), C5 (signed-URL upgrade for memory photos), C7 (client-side image downscale), `.env.example` rotation (user explicitly accepted risk).
+
+**Verified live:** edge function `aurzo-ai` redeployed; migration 0015 applied to project `lnvebvrayuveygycpolc` (RPC present, old `partner_links_consent_update` policy dropped, 3 remaining policies = create/select/delete only).
+
+---
+
 **Stack reviewed:** React 18 + TypeScript 5.5 + Vite 5, Zustand 4, react-router-dom 6, Tailwind, Supabase JS 2 (Postgres + Storage + Edge Functions), Anthropic SDK 0.60.0 (Deno runtime).
 **Severity legend:** **CRITICAL** = data loss / security / outage · **HIGH** = broken feature or wrong behavior in normal use · **MEDIUM** = incorrect behavior in edge cases or significant UX defect · **LOW** = polish / cleanup / future risk.
 
