@@ -28,15 +28,22 @@ export default function AppSwitcher() {
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-journal px-3 py-1.5
-                   hover:bg-cream-200 transition-colors"
+                   bg-ivory-50 dark:bg-charcoal-800
+                   border border-cream-200 dark:border-charcoal-700
+                   hover:bg-cream-100 dark:hover:bg-charcoal-700
+                   shadow-sm transition-colors"
         aria-label="Switch Aurzo app"
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
-        <span className="h-2 w-2 rounded-full"
+        <span className="h-2.5 w-2.5 rounded-full"
           style={{ backgroundColor: current?.accent_color ?? '#b0623f' }} />
-        <span className="font-serif text-base text-charcoal-900">
+        <span className="font-serif text-base text-charcoal-900 dark:text-cream-50">
           {current?.name ?? 'Aurzo'}
         </span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+             className="text-charcoal-700 dark:text-cream-100"
+             stroke="currentColor"
              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9"/>
         </svg>

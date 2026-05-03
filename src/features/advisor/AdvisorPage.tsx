@@ -6,6 +6,8 @@ import {
   createThread, listMessages, listThreads, localAdvise, postMessage,
 } from '@/services/advisorService';
 import { aiAdviseStream } from '@/services/aiService';
+import { friendlyError } from '@/services/friendlyError';
+import { toast } from '@/stores/toastStore';
 import { SUGGESTED_PROMPTS } from '@/types/advisor';
 import type { AdvisorMessage, AdvisorThread } from '@/types/advisor';
 
@@ -21,6 +23,7 @@ export default function AdvisorPage() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,10 +33,15 @@ export default function AdvisorPage() {
   }, []); // eslint-disable-line
 
   async function initThread() {
-    const threads = await listThreads();
-    if (threads.length > 0) {
-      setThread(threads[0]);
-      setMessages(await listMessages(threads[0].id));
+    try {
+      const threads = await listThreads();
+      if (threads.length > 0) {
+        setThread(threads[0]);
+        setMessages(await listMessages(threads[0].id));
+      }
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(friendlyError(e, 'Could not load past conversations.'));
     }
   }
 
@@ -67,6 +75,8 @@ export default function AdvisorPage() {
       if (!reply.trim()) reply = localAdvise(text, people, dates);
       const asstMsg = await postMessage(t.id, user.id, 'assistant', reply);
       setMessages((m) => [...m, asstMsg]);
+    } catch (e) {
+      toast.error(friendlyError(e, 'Could not send the message.'));
     } finally {
       setBusy(false);
     }
@@ -80,6 +90,14 @@ export default function AdvisorPage() {
           Warm, specific guidance for the relationships in your life.
         </p>
       </header>
+
+      {loadError && (
+        <div className="mb-3 text-sm rounded-journal border border-terracotta-700/50
+                        bg-terracotta-900/20 text-terracotta-200 px-3 py-2">
+          {loadError}{' '}
+          <button className="underline" onClick={() => void initThread()}>Retry</button>
+        </div>
+      )}
 
       <div className="card-journal flex flex-col h-[70vh]">
         <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 pr-1">

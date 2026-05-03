@@ -7,17 +7,26 @@ import {
 import type { BucketItem, CoupleCheckin, PartnerLink } from '@/types/couples';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
 import { toast } from '@/stores/toastStore';
+import { friendlyError } from '@/services/friendlyError';
 
 export default function CouplesPage() {
   const { user } = useAuthStore();
   const [link, setLink] = useState<PartnerLink | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    void myLink().then((l) => { setLink(l); setLoading(false); });
-  }, []);
+  function refetch() {
+    let cancelled = false;
+    setLoading(true); setLoadError(null);
+    myLink()
+      .then((l) => { if (!cancelled) { setLink(l); setLoadError(null); } })
+      .catch((e) => { if (!cancelled) setLoadError(friendlyError(e, 'Could not load couples.')); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }
+  useEffect(refetch, []);
 
   async function propose() {
     if (!user || !partnerId) return;
@@ -26,7 +35,7 @@ export default function CouplesPage() {
       setLink(l);
       setErr(null);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not propose link');
+      setErr(friendlyError(e, 'Could not propose link.'));
     }
   }
 
@@ -37,17 +46,34 @@ export default function CouplesPage() {
     try {
       setLink(await acceptLink(link.id));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not accept link.');
+      toast.error(friendlyError(e, 'Could not accept link.'));
     }
   }
 
   async function revoke() {
     if (!link) return;
-    await revokeLink(link.id);
-    setLink(null);
+    try {
+      await revokeLink(link.id);
+      setLink(null);
+    } catch (e) {
+      toast.error(friendlyError(e, 'Could not cancel.'));
+    }
   }
 
   if (loading) return <div className="text-charcoal-500 text-sm">Loading…</div>;
+  if (loadError) {
+    return (
+      <section className="animate-bloom max-w-xl">
+        <header className="mb-6">
+          <h1 className="text-4xl">Couples</h1>
+        </header>
+        <div className="card-journal text-sm text-terracotta-700 dark:text-terracotta-300">
+          {loadError}
+          <button className="underline ml-2" onClick={() => refetch()}>Retry</button>
+        </div>
+      </section>
+    );
+  }
 
   if (!link) {
     return (
@@ -114,22 +140,36 @@ function ActiveCouple({ link }: { link: PartnerLink }) {
   const [brainstorming, setBrainstorming] = useState(false);
 
   useEffect(() => {
-    void listCheckins(link.id).then(setCheckins);
-    void listBucket(link.id).then(setBucket);
+    let cancelled = false;
+    listCheckins(link.id)
+      .then((rows) => { if (!cancelled) setCheckins(rows); })
+      .catch((e) => { if (!cancelled) toast.error(friendlyError(e, 'Could not load check-ins.')); });
+    listBucket(link.id)
+      .then((rows) => { if (!cancelled) setBucket(rows); })
+      .catch((e) => { if (!cancelled) toast.error(friendlyError(e, 'Could not load bucket list.')); });
+    return () => { cancelled = true; };
   }, [link.id]);
 
   async function submitCheckin() {
     if (!user) return;
-    await addCheckin(link.id, user.id, score, appreciation);
-    setAppreciation('');
-    setCheckins(await listCheckins(link.id));
+    try {
+      await addCheckin(link.id, user.id, score, appreciation);
+      setAppreciation('');
+      setCheckins(await listCheckins(link.id));
+    } catch (e) {
+      toast.error(friendlyError(e, 'Could not save check-in.'));
+    }
   }
 
   async function submitBucket() {
     if (!newItem.trim()) return;
-    await addBucket(link.id, newItem.trim());
-    setNewItem('');
-    setBucket(await listBucket(link.id));
+    try {
+      await addBucket(link.id, newItem.trim());
+      setNewItem('');
+      setBucket(await listBucket(link.id));
+    } catch (e) {
+      toast.error(friendlyError(e, 'Could not add to bucket list.'));
+    }
   }
 
   async function brainstormBucket() {

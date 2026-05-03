@@ -119,8 +119,8 @@ export default function NotificationPrefsPanel() {
           {ROWS.map((r) => (
             <li key={r.channel} className="flex items-center justify-between py-3 gap-3">
               <div>
-                <div className="font-medium text-charcoal-700 dark:text-charcoal-100">{r.label}</div>
-                <div className="text-xs text-charcoal-500 dark:text-charcoal-300">{r.description}</div>
+                <div className="font-semibold text-charcoal-900 dark:text-cream-50">{r.label}</div>
+                <div className="text-xs text-charcoal-600 dark:text-charcoal-300">{r.description}</div>
               </div>
               <button
                 type="button"

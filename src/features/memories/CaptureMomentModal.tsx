@@ -132,16 +132,22 @@ export default function CaptureMomentModal() {
                 Kind
               </span>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {TYPES.map((t) => (
-                  <button key={t} onClick={() => setMtype(t)}
-                    className={[
-                      'chip text-[11px] transition-colors',
-                      mtype === t ? 'bg-terracotta-500 text-ivory-50 border-terracotta-500' : '',
-                    ].join(' ')}>
-                    <span className="mr-1" aria-hidden>{MEMORY_TYPE_EMOJI[t]}</span>
-                    {MEMORY_TYPE_LABELS[t]}
-                  </button>
-                ))}
+                {TYPES.map((t) => {
+                  const isSelected = mtype === t;
+                  return (
+                    <button key={t} type="button" onClick={() => setMtype(t)}
+                      aria-pressed={isSelected}
+                      className={[
+                        'chip text-[11px] transition-all',
+                        isSelected
+                          ? '!bg-terracotta-600 !text-ivory-50 !border-terracotta-700 ring-2 ring-terracotta-400/40 font-medium shadow-sm'
+                          : 'hover:bg-cream-100 dark:hover:bg-charcoal-700',
+                      ].join(' ')}>
+                      <span className="mr-1" aria-hidden>{MEMORY_TYPE_EMOJI[t]}</span>
+                      {MEMORY_TYPE_LABELS[t]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

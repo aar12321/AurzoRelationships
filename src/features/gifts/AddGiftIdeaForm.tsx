@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useGiftsStore } from '@/stores/giftsStore';
 import { usePeopleStore } from '@/stores/peopleStore';
+import { friendlyError } from '@/services/friendlyError';
+import { toast } from '@/stores/toastStore';
 import FieldRow, { inputClass } from '@/features/people/form/FieldRow';
 
 type Props = { personId?: string; onDone?: () => void };
@@ -22,6 +24,8 @@ export default function AddGiftIdeaForm({ personId, onDone }: Props) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    if (!pid) { setErr('Pick who this idea is for.'); return; }
+    if (!title.trim()) { setErr('Write a short name for the gift.'); return; }
     setBusy(true); setErr(null);
     try {
       await addIdea({
@@ -32,9 +36,12 @@ export default function AddGiftIdeaForm({ personId, onDone }: Props) {
         estimated_cost: cost ? Number(cost) : null,
       }, user.id);
       setTitle(''); setReason(''); setUrl(''); setCost('');
+      toast.success('Idea saved.');
       onDone?.();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Save failed');
+    } catch (err) {
+      const msg = friendlyError(err, 'Could not save this idea.');
+      setErr(msg);
+      toast.error(msg);
     } finally { setBusy(false); }
   }
 

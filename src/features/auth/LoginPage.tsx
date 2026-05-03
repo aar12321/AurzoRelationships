@@ -156,7 +156,7 @@ function VisualPanel() {
       aria-hidden="true"
       className="relative overflow-hidden hidden lg:flex
                  bg-[radial-gradient(circle_at_30%_20%,#2a1f1a,transparent_55%),radial-gradient(circle_at_70%_80%,#1a2230,transparent_55%)]
-                 bg-charcoal-950 items-end p-12"
+                 bg-charcoal-950 items-start p-12"
     >
       <style>{`
         @keyframes aurora-a { 0%,100% { transform: translate(-10%, -5%) scale(1); } 50% { transform: translate(25%, 15%) scale(1.35); } }
@@ -183,17 +183,39 @@ function VisualPanel() {
                       bg-[radial-gradient(white_1px,transparent_1px)]
                       [background-size:3px_3px]" />
 
-      <div className="relative z-10 max-w-md">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-terracotta-500 flex items-center
-                          justify-center font-serif text-xl">A</div>
-          <span className="font-serif text-2xl">Aurzo</span>
+      <div className="relative z-10 max-w-lg">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-11 h-11 rounded-xl bg-terracotta-500 flex items-center
+                          justify-center font-serif text-2xl">A</div>
+          <span className="font-serif text-3xl">Aurzo</span>
         </div>
-        <h2 className="font-serif text-5xl leading-tight mb-3">
+
+        <h2 className="font-serif text-5xl leading-[1.05] mb-5 text-cream-50">
           The people who matter,<br/>remembered with care.
         </h2>
-        <p className="text-charcoal-300 text-lg max-w-sm">
-          Your private relationship intelligence — across every Aurzo platform.
+        <p className="text-cream-100 text-lg leading-relaxed mb-10 max-w-md">
+          Your private relationship journal — quietly tracks who's drifting,
+          surfaces the small moments worth remembering, and helps you show up
+          for the people you love before they ever wonder where you went.
+        </p>
+
+        <div className="space-y-4 max-w-md">
+          <PreviewItem icon="📔"
+            title="A journal that remembers for you"
+            body="Birthdays, how you met, what they care about — all in one warm place." />
+          <PreviewItem icon="🌱"
+            title="Gentle nudges, never noisy"
+            body="A soft tap when someone's quietly fading. No streaks, no shame." />
+          <PreviewItem icon="🎁"
+            title="Catch ideas as they come"
+            body="Save a gift idea mid-conversation. Never scramble at the last minute again." />
+          <PreviewItem icon="🤝"
+            title="Couples mode, when you're ready"
+            body="Optional shared space for the two of you — both have to consent." />
+        </div>
+
+        <p className="mt-10 text-xs uppercase tracking-wider text-charcoal-300">
+          Private by default · Yours alone unless you choose to share
         </p>
       </div>
     </aside>
@@ -206,6 +228,18 @@ const inputCls = [
   'text-cream-50 placeholder-charcoal-400',
   'focus:outline-none focus:border-terracotta-500 focus:ring-2 focus:ring-terracotta-500/30',
 ].join(' ');
+
+function PreviewItem({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="text-xl mt-0.5 leading-none" aria-hidden>{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-cream-50 text-sm font-medium">{title}</div>
+        <div className="text-charcoal-300 text-sm leading-snug">{body}</div>
+      </div>
+    </div>
+  );
+}
 
 function Field(props: { label: string; children: React.ReactNode }) {
   return (

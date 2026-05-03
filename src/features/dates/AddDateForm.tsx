@@ -113,12 +113,14 @@ export default function AddDateForm({ personId, existing, onDone }: Props) {
             const on = leads.includes(n);
             return (
               <button type="button" key={n} onClick={() => toggleLead(n)}
+                aria-pressed={on}
                 className={[
-                  'rounded-full px-3 py-1 text-xs border transition-colors',
+                  'rounded-full px-3 py-1 text-xs border-2 transition-all',
                   on
-                    ? 'bg-terracotta-500 border-terracotta-500 text-ivory-50'
-                    : 'border-cream-200 text-charcoal-700 hover:bg-cream-100',
+                    ? 'bg-ivory-50 border-terracotta-600 text-terracotta-700 font-semibold shadow-sm ring-2 ring-terracotta-400/30 dark:bg-cream-50 dark:text-terracotta-700'
+                    : 'bg-ivory-50 border-cream-300 text-charcoal-700 hover:bg-cream-100 hover:border-cream-400 dark:bg-charcoal-800 dark:border-charcoal-700 dark:text-cream-100',
                 ].join(' ')}>
+                {on && <span className="mr-1" aria-hidden>✓</span>}
                 {LEAD_LABEL[n]}
               </button>
             );
