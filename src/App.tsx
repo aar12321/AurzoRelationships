@@ -13,8 +13,6 @@ import TodayPage from '@/features/today/TodayPage';
 // Route-level code splitting. TodayPage + LoginPage stay eager because
 // Today is now the landing surface for every session; the Dashboard is
 // reachable at /relationships/dashboard and lazy-loads on first navigation.
-const Dashboard          = lazy(() => import('@/pages/Dashboard'));
-const RelationshipMapPage = lazy(() => import('@/features/map/RelationshipMapPage'));
 const PeopleDirectory    = lazy(() => import('@/features/people/PeopleDirectoryPage'));
 const AddPerson          = lazy(() => import('@/features/people/AddPersonPage'));
 const EditPerson         = lazy(() => import('@/features/people/EditPersonPage'));
@@ -24,13 +22,12 @@ const PersonGifts        = lazy(() => import('@/features/gifts/PersonGiftsPage')
 const PersonMessages     = lazy(() => import('@/features/outreach/ComposerPage'));
 const DatesCalendar      = lazy(() => import('@/features/dates/DatesPage'));
 const Health             = lazy(() => import('@/features/health/HealthPage'));
-const ForecastPage       = lazy(() => import('@/features/health/ForecastPage'));
 const Events             = lazy(() => import('@/features/events/EventsPage'));
 const CreateEvent        = lazy(() => import('@/features/events/CreateEventPage'));
 const EventDetail        = lazy(() => import('@/features/events/EventDetailPage'));
 const GiftHub            = lazy(() => import('@/features/gifts/GiftHubPage'));
 const MemoryLog          = lazy(() => import('@/features/memories/MemoryLogPage'));
-const Couples            = lazy(() => import('@/features/couples/CouplesPage'));
+const AppsHub            = lazy(() => import('@/features/apps/AppsHubPage'));
 const Advisor            = lazy(() => import('@/features/advisor/AdvisorPage'));
 const Settings           = lazy(() => import('@/features/settings/SettingsPage'));
 const NotificationsPage  = lazy(() => import('@/features/notifications/NotificationsPage'));
@@ -68,8 +65,8 @@ export default function App() {
           >
             <Route index element={<TodayPage />} />
             <Route path="today" element={<Navigate to="/relationships" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="map" element={<RelationshipMapPage />} />
+            <Route path="dashboard" element={<Navigate to="/relationships" replace />} />
+            <Route path="apps" element={<AppsHub />} />
             <Route path="people" element={<PeopleDirectory />} />
             <Route path="people/new" element={<AddPerson />} />
             <Route path="people/:id" element={<PersonProfile />} />
@@ -79,13 +76,11 @@ export default function App() {
             <Route path="people/:id/messages" element={<PersonMessages />} />
             <Route path="dates" element={<DatesCalendar />} />
             <Route path="health" element={<Health />} />
-            <Route path="forecast" element={<ForecastPage />} />
             <Route path="events" element={<Events />} />
             <Route path="events/new" element={<CreateEvent />} />
             <Route path="events/:id" element={<EventDetail />} />
             <Route path="gifts" element={<GiftHub />} />
             <Route path="memories" element={<MemoryLog />} />
-            <Route path="couples" element={<Couples />} />
             <Route path="advisor" element={<Advisor />} />
             <Route path="settings" element={<Settings />} />
             <Route path="notifications" element={<NotificationsPage />} />

@@ -44,8 +44,9 @@ export default function PeopleDirectoryPage() {
       <header className="mb-6 flex items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl">People</h1>
-          <p className="text-charcoal-500 mt-1">
-            The people who matter, remembered with care.
+          <p className="text-charcoal-500 dark:text-charcoal-300 mt-1">
+            Tap anyone to open their profile. Add new people any time —
+            only a name is required.
           </p>
         </div>
         <Link to="/relationships/people/new" className="btn-primary">

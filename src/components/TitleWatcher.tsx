@@ -4,11 +4,14 @@
 // useDocumentTitle() directly — it'll win because it runs after navigation.
 
 import { useLocation } from 'react-router-dom';
-import { NAV_ITEMS } from '@/components/layout/nav';
+import { DESKTOP_NAV, MOBILE_NAV } from '@/components/layout/nav';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 // Longest-prefix-first so /relationships/today wins over /relationships.
-const SORTED_NAV = [...NAV_ITEMS].sort((a, b) => b.to.length - a.to.length);
+// Combine desktop + mobile so /relationships/apps (mobile-only) still
+// resolves to "Apps" in the browser tab.
+const SORTED_NAV = [...DESKTOP_NAV, ...MOBILE_NAV]
+  .sort((a, b) => b.to.length - a.to.length);
 
 const STATIC_TITLES: Record<string, string> = {
   '/signin': 'Sign in',

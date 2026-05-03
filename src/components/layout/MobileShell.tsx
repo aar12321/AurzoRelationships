@@ -1,38 +1,29 @@
-// Mobile shell — top app bar + full-width content + bottom tab bar.
-// "More" tab opens a slide-up drawer with the remaining nav items.
-//
-// The design avoids nested horizontal scrolling and puts the thumb-reachable
-// controls (tabs, search) at the bottom. Uses the same CommandPaletteTrigger
-// and NotificationBell as desktop so muscle memory carries across modes.
+// Mobile shell — three bottom-tabs (Home, Apps, Profile) per product
+// spec. The "Apps" tab opens an in-platform hub page (/relationships/apps)
+// listing every other surface as a card so a phone user can still reach
+// People / Dates / Gifts / Memories / Advisor / etc. without a hidden
+// "More" drawer or a cross-platform app switcher.
 
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/features/auth/AuthProvider';
-import AppSwitcher from '@/features/notifications/AppSwitcher';
+import { NavLink, Outlet } from 'react-router-dom';
 import NotificationBell from '@/features/notifications/NotificationBell';
 import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
-import ConfirmModal from '@/components/ConfirmModal';
-import { NAV_ITEMS, type NavItem } from './nav';
-
-const PRIMARY: NavItem[] = NAV_ITEMS.filter((n) => n.primary);
-const SECONDARY: NavItem[] = NAV_ITEMS.filter((n) => !n.primary);
+import { MOBILE_NAV } from './nav';
 
 export default function MobileShell() {
-  const { signOut, user } = useAuth();
-  const [confirmOut, setConfirmOut] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-  const location = useLocation();
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  // Close the More drawer on navigation.
-  useEffect(() => { setMoreOpen(false); }, [location.pathname]);
-
   return (
     <div className="min-h-full flex flex-col">
       <header className="flex items-center justify-between gap-2 px-4 py-3
                          border-b border-cream-200 bg-cream-50/60 sticky top-0 z-10
                          backdrop-blur dark:border-charcoal-700 dark:bg-charcoal-950/70">
-        <AppSwitcher />
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg
+                           bg-terracotta-500 text-ivory-50 font-serif text-sm shadow-sm">
+            A
+          </span>
+          <span className="font-serif text-base text-charcoal-900 dark:text-cream-50">
+            Aurzo Relationships
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <CommandPaletteTrigger />
           <NotificationBell />
@@ -43,7 +34,6 @@ export default function MobileShell() {
         <Outlet />
       </main>
 
-      {/* Bottom tab bar */}
       <nav
         aria-label="Primary navigation"
         className="fixed bottom-0 inset-x-0 z-20 border-t border-cream-200
@@ -51,8 +41,8 @@ export default function MobileShell() {
                    dark:border-charcoal-700 dark:bg-charcoal-950/95
                    pb-[env(safe-area-inset-bottom)]"
       >
-        <ul className="grid grid-cols-5">
-          {PRIMARY.map((it) => (
+        <ul className="grid grid-cols-3">
+          {MOBILE_NAV.map((it) => (
             <li key={it.to}>
               <NavLink
                 to={it.to}
@@ -60,7 +50,7 @@ export default function MobileShell() {
                 data-tour={`nav:${it.to}`}
                 className={({ isActive }) =>
                   [
-                    'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px]',
+                    'flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px]',
                     'transition-colors',
                     isActive
                       ? 'text-terracotta-600 dark:text-terracotta-300'
@@ -68,90 +58,13 @@ export default function MobileShell() {
                   ].join(' ')
                 }
               >
-                <span className="text-lg leading-none" aria-hidden>{it.icon}</span>
+                <span className="text-xl leading-none" aria-hidden>{it.icon}</span>
                 <span>{it.label}</span>
               </NavLink>
             </li>
           ))}
-          <li>
-            <button
-              onClick={() => setMoreOpen(true)}
-              className="w-full flex flex-col items-center justify-center gap-0.5
-                         py-2 text-[11px] text-charcoal-500 dark:text-charcoal-300"
-              aria-label="More"
-            >
-              <span className="text-lg leading-none" aria-hidden>⋯</span>
-              <span>More</span>
-            </button>
-          </li>
         </ul>
       </nav>
-
-      {moreOpen && (
-        <MoreDrawer
-          onClose={() => setMoreOpen(false)}
-          email={user?.email ?? null}
-          onSignOut={() => setConfirmOut(true)}
-        />
-      )}
-
-      <ConfirmModal
-        open={confirmOut}
-        title="Sign out of Aurzo?"
-        description="You'll need to sign back in to see your people, dates, and memories."
-        confirmLabel="Sign out"
-        cancelLabel="Stay"
-        busy={signingOut}
-        onCancel={() => setConfirmOut(false)}
-        onConfirm={async () => {
-          setSigningOut(true);
-          try { await signOut(); } finally { setSigningOut(false); setConfirmOut(false); }
-        }}
-      />
-    </div>
-  );
-}
-
-function MoreDrawer(props: { onClose: () => void; email: string | null; onSignOut: () => void }) {
-  return (
-    <div className="fixed inset-0 z-30 flex items-end sm:items-center sm:justify-center
-                    bg-charcoal-900/40 backdrop-blur-sm dark:bg-charcoal-950/70"
-         onClick={props.onClose} role="dialog" aria-modal="true">
-      <div onClick={(e) => e.stopPropagation()}
-           className="w-full sm:max-w-sm card-journal p-0 rounded-t-journal sm:rounded-journal
-                      animate-bloom overflow-hidden">
-        <div className="px-4 py-3 border-b border-cream-200 dark:border-charcoal-700 flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-charcoal-500 dark:text-charcoal-300">
-            More
-          </span>
-          <button onClick={props.onClose} className="btn-ghost text-xs py-1">Close</button>
-        </div>
-        <ul className="py-2 max-h-[60vh] overflow-y-auto">
-          {SECONDARY.map((it) => (
-            <li key={it.to}>
-              <NavLink to={it.to}
-                data-tour={`nav:${it.to}`}
-                className={({ isActive }) =>
-                  [
-                    'flex items-center gap-3 px-4 py-3 text-sm transition-colors',
-                    isActive
-                      ? 'bg-cream-100 text-terracotta-600 dark:bg-charcoal-700 dark:text-terracotta-300'
-                      : 'text-charcoal-700 dark:text-cream-100 hover:bg-cream-50 dark:hover:bg-charcoal-800',
-                  ].join(' ')
-                }>
-                <span className="text-lg w-6 text-center" aria-hidden>{it.icon}</span>
-                {it.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-        <div className="px-4 py-3 border-t border-cream-200 dark:border-charcoal-700
-                        text-xs text-charcoal-500 dark:text-charcoal-300
-                        flex items-center justify-between gap-3">
-          <span className="truncate">{props.email}</span>
-          <button onClick={props.onSignOut} className="btn-ghost text-xs py-1">Sign out</button>
-        </div>
-      </div>
     </div>
   );
 }
