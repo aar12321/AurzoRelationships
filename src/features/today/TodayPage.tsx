@@ -14,6 +14,7 @@ import { composeToday, type TodayItem } from '@/services/todayFeedService';
 import { upcomingWithin } from '@/services/datesService';
 import { computeStrength } from '@/services/interactionsService';
 import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
+import type { Strength } from '@/types/people';
 import PersonAvatar from '@/features/people/PersonAvatar';
 import StrengthDot from '@/features/people/StrengthDot';
 
@@ -120,7 +121,7 @@ function SectionHeading({ title, hint }: { title: string; hint?: string }) {
 }
 
 function PeopleSnapshot(props: {
-  snapshot: { person: import('@/types/people').Person; strength: number; daysSince: number }[];
+  snapshot: { person: import('@/types/people').Person; strength: Strength; daysSince: number }[];
   hasInner: boolean;
 }) {
   const title = props.hasInner ? 'Your inner circle' : 'Your people';

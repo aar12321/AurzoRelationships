@@ -325,7 +325,7 @@ export default function GiftHubPage() {
               <GiftIdeaCard
                 key={i.id}
                 idea={i}
-                showPerson={person ? null : (people.find((p) => p.id === i.person_id)?.full_name ?? null)}
+                showPerson={person ? undefined : people.find((p) => p.id === i.person_id)?.full_name}
               />
             ))}
           </div>
