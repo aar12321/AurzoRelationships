@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useMemoriesStore } from '@/stores/memoriesStore';
 import { usePeopleStore } from '@/stores/peopleStore';
 import { uploadMemoryPhoto } from '@/services/memoriesService';
+import { friendlyError } from '@/services/friendlyError';
 import { toast } from '@/stores/toastStore';
 import type { MemoryType } from '@/types/memories';
 import { MEMORY_TYPE_EMOJI, MEMORY_TYPE_LABELS } from '@/types/memories';
@@ -41,6 +42,10 @@ export default function AddMemoryForm({ personId, onDone }: Props) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
+    if (!title.trim() && !note.trim()) {
+      setErr('Add a title or a note — one of them is enough.');
+      return;
+    }
     setBusy(true); setErr(null);
     try {
       // Upload the photo first so we can attach the URL on insert. A
@@ -65,8 +70,10 @@ export default function AddMemoryForm({ personId, onDone }: Props) {
       setTitle(''); setNote(''); setWhen(''); setLoc('');
       setPhoto(null); setPreview(null);
       onDone?.();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Save failed');
+    } catch (err) {
+      const msg = friendlyError(err, 'Could not save the memory.');
+      setErr(msg);
+      toast.error(msg);
     } finally { setBusy(false); }
   }
 

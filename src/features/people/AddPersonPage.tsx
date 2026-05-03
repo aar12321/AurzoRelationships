@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { usePeopleStore } from '@/stores/peopleStore';
 import { toast } from '@/stores/toastStore';
+import { friendlyError } from '@/services/friendlyError';
 import type {
   CommunicationPref,
   PersonInput,
@@ -74,8 +75,9 @@ export default function AddPersonPage() {
       }
       nav(`/relationships/people/${person.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save.');
-      toast.error('Could not save. Try again.');
+      const msg = friendlyError(err, 'Could not save this person.');
+      setError(msg);
+      toast.error(msg);
       setBusy(false);
     }
   }
