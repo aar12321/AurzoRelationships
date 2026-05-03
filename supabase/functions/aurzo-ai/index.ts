@@ -35,7 +35,21 @@ Rules you always follow:
 type Action =
   | { action: 'advise'; question: string; people?: PersonCtx[]; dates?: DateCtx[]; stream?: boolean }
   | { action: 'compose'; person: PersonCtx; occasion: string; tone: string; channel: string }
-  | { action: 'gift_ideas'; person: PersonCtx; budget?: number; occasion?: string; interest_tags?: string[] }
+  | { action: 'gift_ideas'; person: PersonCtx; budget?: number; occasion?: string;
+      interest_tags?: string[];
+      // Shopper-mode extras: the GiftHub shopper UI sends these to steer
+      // the next batch. extra_interests are user-typed tags layered on
+      // top of whatever lives in person.notes; more_like / not_for_me
+      // are titles the user thumbed-up / thumbed-down; exclude_titles
+      // are anything we have already shown so we do not repeat. When
+      // shopper_mode is true we use the personalized prompt and SKIP
+      // the cross-user shared-cache write (results are user-tailored).
+      extra_interests?: string[];
+      more_like?: string[];
+      not_for_me?: string[];
+      exclude_titles?: string[];
+      shopper_mode?: boolean;
+    }
   | { action: 'date_ideas'; shared_interests?: string[]; budget?: string; location?: string }
   | { action: 'weekly_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
   | { action: 'surface_pulse'; people: PersonCtx[]; dates?: DateCtx[] }
@@ -313,19 +327,54 @@ Respond in plain prose. 2-5 sentences. Reference specific people or dates when i
 // ---------- cheap actions (Haiku 4.5) ----------
 
 async function giftIdeas(b: Extract<Action, { action: 'gift_ideas' }>) {
-  // Two prompt paths. When interest_tags is supplied (shared-cache mode),
-  // we MUST NOT reference full_name or notes — the result lands in a
-  // cross-user row, so every prompt input becomes part of what other
-  // users effectively see. Sanitized prompt is purely shape-based.
-  const sharedMode = Array.isArray(b.interest_tags) && b.interest_tags.length > 0;
-  const userMsg = sharedMode
-    ? `Suggest 5 gift ideas. Generic — do not invent or assume a name. Return STRICT JSON.
+  // Three prompt paths.
+  //
+  // shared_mode (interest_tags present, no shopper_mode) — sanitized,
+  //   name/notes-free prompt. Result lands in a cross-user shared row,
+  //   so every input must be public-shape only.
+  //
+  // shopper_mode — the rich GiftHub shopper UI. Personalized prompt
+  //   plus user-supplied extra interests, like/dislike feedback, and
+  //   already-seen titles to exclude. We never write this batch to the
+  //   shared cache (the result is steered for one user), so it's safe
+  //   to include name/notes here.
+  //
+  // legacy — old per-user-cached call without extras. Same personalized
+  //   prompt, no steering inputs.
+  const shopperMode = b.shopper_mode === true;
+  const sharedMode = !shopperMode
+    && Array.isArray(b.interest_tags) && b.interest_tags.length > 0;
+
+  let userMsg: string;
+  if (sharedMode) {
+    userMsg = `Suggest 5 gift ideas. Generic — do not invent or assume a name. Return STRICT JSON.
 
 Recipient relationship: ${b.person.relationship_type ?? 'friend'}
 Recipient interests: ${b.interest_tags!.join(', ')}
 Budget: ${b.budget ? `~$${b.budget}` : 'flexible'}
-Occasion: ${b.occasion ?? 'general'}`
-    : `Suggest 5 gift ideas for this person. Return STRICT JSON matching the schema.
+Occasion: ${b.occasion ?? 'general'}`;
+  } else if (shopperMode) {
+    const extras = (b.extra_interests ?? []).filter(Boolean);
+    const liked = (b.more_like ?? []).filter(Boolean);
+    const disliked = (b.not_for_me ?? []).filter(Boolean);
+    const excluded = (b.exclude_titles ?? []).filter(Boolean);
+    const lines = [
+      `Suggest 5 fresh, specific gift ideas for this person. STRICT JSON per schema.`,
+      `Person: ${b.person.full_name}`,
+      `Relationship: ${b.person.relationship_type ?? 'unspecified'}`,
+      `Notes: ${b.person.notes ?? 'none yet'}`,
+      `Interests / context: ${b.person.interests ?? ''}`,
+      extras.length ? `Extra interests the user added: ${extras.join(', ')}` : '',
+      `Budget: ${b.budget ? `~$${b.budget} max — stay at or under` : 'flexible'}`,
+      `Occasion: ${b.occasion ?? 'general'}`,
+      liked.length ? `The user liked these — produce more in this style or vein: ${liked.join('; ')}` : '',
+      disliked.length ? `The user disliked these — actively AVOID this style/vein: ${disliked.join('; ')}` : '',
+      excluded.length ? `Do NOT repeat any of these titles or close paraphrases: ${excluded.slice(0, 50).join('; ')}` : '',
+      `Be concrete: name actual products / experiences, not categories. Each title should be searchable on Amazon.`,
+    ].filter(Boolean);
+    userMsg = lines.join('\n');
+  } else {
+    userMsg = `Suggest 5 gift ideas for this person. Return STRICT JSON matching the schema.
 
 Person: ${b.person.full_name}
 Relationship: ${b.person.relationship_type ?? 'unspecified'}
@@ -333,6 +382,7 @@ Notes: ${b.person.notes ?? 'none yet'}
 Interests / context: ${b.person.interests ?? ''}
 Budget: ${b.budget ? `~$${b.budget}` : 'flexible'}
 Occasion: ${b.occasion ?? 'general'}`;
+  }
 
   return callJson('claude-haiku-4-5', userMsg, 500, {
     type: 'object',

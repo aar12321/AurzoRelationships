@@ -26,13 +26,28 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 function personCtx(p: Person) {
+  // Full context for the advisor / composer / shopper. We deliberately
+  // include life_context as a whole jsonb (job, family, events, etc.)
+  // and the priority/cadence/social-capacity signals so Claude can give
+  // advice that's actually anchored in this person — not generic prose.
   return {
+    id: p.id,
     full_name: p.full_name,
     relationship_type: p.relationship_type,
+    relationship_goal: p.relationship_goal,
+    communication_pref: p.communication_pref,
+    how_we_met: p.how_we_met,
+    met_on: p.met_on,
+    location: p.location,
+    birthday: p.birthday,
     notes: p.notes,
     interests: p.life_context?.job ?? null,
     life_context: p.life_context,
+    custom_fields: p.custom_fields,
     last_contacted_at: p.last_contacted_at,
+    priority_tier: p.priority_tier ?? null,
+    cadence_days: p.cadence_days ?? null,
+    social_capacity: p.social_capacity ?? null,
   };
 }
 
@@ -105,6 +120,37 @@ export async function aiGiftIdeas(
       return r.ideas ?? [];
     },
   );
+}
+
+// Shopper-mode gift ideas — uses the full person context plus ad-hoc
+// extra interests the user typed in, plus thumbs-up / thumbs-down
+// feedback from previous results. NOT cached (each call should produce
+// fresh ideas, especially after a like/dislike). The model gets a clear
+// instruction to vary from prior suggestions when feedback is provided.
+export type ShopperOpts = {
+  budget?: number;             // dollars, max
+  occasion?: string;
+  extraInterests?: string[];   // user-added tags ("loves bourbon")
+  moreLike?: string[];         // titles the user thumbed-up
+  notForMe?: string[];         // titles the user thumbed-down
+  exclude?: string[];          // titles already shown so we don't repeat
+};
+export async function aiGiftIdeasShopper(
+  person: Person,
+  opts: ShopperOpts = {},
+): Promise<GiftIdea[]> {
+  const r = await invoke<{ ideas: GiftIdea[] }>({
+    action: 'gift_ideas',
+    person: personCtx(person),
+    budget: opts.budget,
+    occasion: opts.occasion,
+    extra_interests: opts.extraInterests,
+    more_like: opts.moreLike,
+    not_for_me: opts.notForMe,
+    exclude_titles: opts.exclude,
+    shopper_mode: true,
+  });
+  return r.ideas ?? [];
 }
 
 // Crude interest-tag extractor. Pulls 4+ letter tokens from the person's

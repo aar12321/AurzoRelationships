@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthProvider';
-import AppSwitcher from '@/features/notifications/AppSwitcher';
 import NotificationBell from '@/features/notifications/NotificationBell';
 import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
 import ConfirmModal from '@/components/ConfirmModal';
-import { NAV_ITEMS } from './nav';
+import { DESKTOP_NAV } from './nav';
 
 export default function DesktopShell() {
   const { signOut, user } = useAuth();
@@ -19,27 +18,40 @@ export default function DesktopShell() {
                    sticky top-0 flex flex-col
                    dark:bg-charcoal-900 dark:border-charcoal-700"
       >
-        <div className="px-3 py-5">
-          <AppSwitcher />
+        <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl
+                           bg-terracotta-500 text-ivory-50 font-serif text-lg shadow-sm">
+            A
+          </span>
+          <div>
+            <div className="font-serif text-base text-charcoal-900 dark:text-cream-50 leading-none">
+              Aurzo
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-charcoal-500 dark:text-charcoal-300 mt-0.5">
+              Relationships
+            </div>
+          </div>
         </div>
 
         <nav className="flex flex-col gap-1 px-3 pb-3 overflow-y-auto">
-          {NAV_ITEMS.map((item) => (
+          {DESKTOP_NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.exact}
               data-tour={`nav:${item.to}`}
+              title={item.description}
               className={({ isActive }) =>
                 [
-                  'rounded-journal px-3 py-2 text-sm transition-colors',
+                  'flex items-center gap-2 rounded-journal px-3 py-2 text-sm transition-colors',
                   isActive
                     ? 'bg-terracotta-600 text-ivory-50 dark:bg-terracotta-500'
                     : 'text-charcoal-700 hover:bg-cream-200 dark:text-cream-100 dark:hover:bg-charcoal-800',
                 ].join(' ')
               }
             >
-              {item.label}
+              <span className="text-base leading-none w-5 text-center" aria-hidden>{item.icon}</span>
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>

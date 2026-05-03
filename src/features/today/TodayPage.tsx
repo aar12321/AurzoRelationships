@@ -1,6 +1,8 @@
-// Today — a unified daily feed. Merges notifications, upcoming dates,
-// fading relationships, and active streaks into a single prioritized list.
-// This complements the Dashboard (snapshot) with a chronological timeline.
+// Today — the platform's home/dashboard. One stop with everything that
+// matters this morning: a personalized feed (notifications, upcoming
+// dates, fading relationships), an "Inner circle" snapshot, the next
+// 30 days of important dates, and quick-capture launchpads. Replaces
+// the old separate Dashboard surface, which has been retired.
 
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
@@ -9,6 +11,11 @@ import { useDatesStore } from '@/stores/datesStore';
 import { useInteractionsStore } from '@/stores/interactionsStore';
 import { useNotificationsStore } from '@/stores/notificationsStore';
 import { composeToday, type TodayItem } from '@/services/todayFeedService';
+import { upcomingWithin } from '@/services/datesService';
+import { computeStrength } from '@/services/interactionsService';
+import { DATE_TYPE_EMOJI, daysUntil } from '@/types/dates';
+import PersonAvatar from '@/features/people/PersonAvatar';
+import StrengthDot from '@/features/people/StrengthDot';
 
 export default function TodayPage() {
   const people = usePeopleStore((s) => s.people);
@@ -32,6 +39,26 @@ export default function TodayPage() {
     [people, dates, interactions, notifications],
   );
 
+  const upcoming = useMemo(() => upcomingWithin(dates, 30).slice(0, 5), [dates]);
+
+  // Strongest signal the user can act on now: people they care about who
+  // haven't been touched in a while. Inner circle gets priority; if there
+  // is no inner circle yet (new user), surface fading from the full list.
+  const peopleSnapshot = useMemo(() => {
+    const decorated = people.map((p) => ({
+      person: p,
+      strength: computeStrength(p, interactions),
+      daysSince: p.last_contacted_at
+        ? Math.floor((Date.now() - new Date(p.last_contacted_at).getTime()) / 86_400_000)
+        : Number.POSITIVE_INFINITY,
+    }));
+    const inner = decorated.filter((d) => d.person.priority_tier === 'inner');
+    const pool = inner.length > 0 ? inner : decorated;
+    return pool
+      .sort((a, b) => b.daysSince - a.daysSince)
+      .slice(0, 6);
+  }, [people, interactions]);
+
   const greeting = greetingFor(new Date());
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long', month: 'long', day: 'numeric',
@@ -46,19 +73,34 @@ export default function TodayPage() {
         <h1 className="text-4xl">{greeting}</h1>
         <p className="text-charcoal-500 dark:text-charcoal-300 mt-1">
           {items.length === 0
-            ? "A quiet day. Nothing pressing."
+            ? "A quiet day. A good time to reach out, not react."
             : `${items.length} ${items.length === 1 ? 'thing' : 'things'} worth noticing.`}
         </p>
       </header>
 
-      {items.length === 0 ? (
+      {items.length > 0 && (
+        <div className="mb-8">
+          <SectionHeading
+            title="What's worth your attention"
+            hint="Tap any card to act on it. The most time-sensitive show first." />
+          <ul className="space-y-3">
+            {items.slice(0, 8).map((it, i) => (
+              <TodayRow key={it.id} item={it} index={i} />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {peopleSnapshot.length > 0 && (
+        <PeopleSnapshot snapshot={peopleSnapshot} hasInner={people.some((p) => p.priority_tier === 'inner')} />
+      )}
+
+      {upcoming.length > 0 && (
+        <UpcomingDates dates={upcoming} people={people} />
+      )}
+
+      {items.length === 0 && peopleSnapshot.length === 0 && upcoming.length === 0 && (
         <EmptyState />
-      ) : (
-        <ul className="space-y-3">
-          {items.map((it, i) => (
-            <TodayRow key={it.id} item={it} index={i} />
-          ))}
-        </ul>
       )}
 
       <QuickCapture />
@@ -66,16 +108,122 @@ export default function TodayPage() {
   );
 }
 
-function QuickCapture() {
-  // The morning-ritual launchpad. Five small affordances so the user can
-  // act on whatever they noticed above without hunting through the nav.
+function SectionHeading({ title, hint }: { title: string; hint?: string }) {
   return (
-    <section aria-labelledby="qc-heading" className="mt-8">
+    <div className="mb-3">
+      <h2 className="font-serif text-2xl text-charcoal-900 dark:text-cream-50">{title}</h2>
+      {hint && (
+        <p className="text-xs text-charcoal-500 dark:text-charcoal-300 mt-0.5">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+function PeopleSnapshot(props: {
+  snapshot: { person: import('@/types/people').Person; strength: number; daysSince: number }[];
+  hasInner: boolean;
+}) {
+  const title = props.hasInner ? 'Your inner circle' : 'Your people';
+  const hint = props.hasInner
+    ? 'Sorted by who you have not connected with the longest. Tap to open their profile.'
+    : 'Pin a few favorites to your inner circle from any profile to surface them here.';
+  return (
+    <section className="mb-8">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <div>
+          <h2 className="font-serif text-2xl text-charcoal-900 dark:text-cream-50">{title}</h2>
+          <p className="text-xs text-charcoal-500 dark:text-charcoal-300 mt-0.5">{hint}</p>
+        </div>
+        <Link to="/relationships/people"
+          className="text-xs text-charcoal-600 dark:text-charcoal-300 hover:underline shrink-0">
+          See all →
+        </Link>
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {props.snapshot.map(({ person, strength, daysSince }) => (
+          <li key={person.id}>
+            <Link to={`/relationships/people/${person.id}`}
+              className="card-journal flex items-center gap-3 p-3 hover:-translate-y-0.5
+                         hover:shadow-warm-dark transition-all">
+              <PersonAvatar name={person.full_name} photoUrl={person.photo_url} size="sm" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-charcoal-900 dark:text-cream-50 truncate">
+                  {person.full_name}
+                </div>
+                <div className="text-xs text-charcoal-500 dark:text-charcoal-300">
+                  {daysSince === Number.POSITIVE_INFINITY
+                    ? 'Never logged a chat'
+                    : daysSince === 0
+                    ? 'Connected today'
+                    : `${daysSince} day${daysSince === 1 ? '' : 's'} since you spoke`}
+                </div>
+              </div>
+              <StrengthDot strength={strength} />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function UpcomingDates(props: {
+  dates: import('@/types/dates').ImportantDate[];
+  people: import('@/types/people').Person[];
+}) {
+  const nameFor = (id?: string | null) =>
+    (id && props.people.find((p) => p.id === id)?.full_name) ?? null;
+  return (
+    <section className="mb-8">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <div>
+          <h2 className="font-serif text-2xl text-charcoal-900 dark:text-cream-50">Coming up</h2>
+          <p className="text-xs text-charcoal-500 dark:text-charcoal-300 mt-0.5">
+            Birthdays, anniversaries and reminders in the next 30 days.
+          </p>
+        </div>
+        <Link to="/relationships/dates"
+          className="text-xs text-charcoal-600 dark:text-charcoal-300 hover:underline shrink-0">
+          See all →
+        </Link>
+      </div>
+      <ul className="space-y-2">
+        {props.dates.map((d) => {
+          const name = nameFor(d.person_id);
+          const n = daysUntil(d);
+          return (
+            <li key={d.id}>
+              <Link to={d.person_id ? `/relationships/people/${d.person_id}` : '/relationships/dates'}
+                className="card-journal flex items-center gap-3 p-3 hover:-translate-y-0.5 transition-transform">
+                <span className="text-2xl leading-none" aria-hidden>{DATE_TYPE_EMOJI[d.date_type]}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-charcoal-900 dark:text-cream-50 truncate">
+                    {d.label}{name ? ` · ${name}` : ''}
+                  </div>
+                  <div className="text-xs text-charcoal-500 dark:text-charcoal-300">
+                    {n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `In ${n} days`}
+                  </div>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function QuickCapture() {
+  return (
+    <section aria-labelledby="qc-heading" className="mt-2">
       <h2 id="qc-heading"
           className="text-xs uppercase tracking-wider text-charcoal-500
-                     dark:text-charcoal-300 mb-2">
+                     dark:text-charcoal-300 mb-1">
         While you're here
       </h2>
+      <p className="text-xs text-charcoal-500 dark:text-charcoal-300 mb-3">
+        Capture something now so future-you remembers.
+      </p>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <QcLink to="/relationships/people" icon="👋" label="Reach out" />
         <QcLink to="/relationships/memories" icon="📸" label="Capture a memory" />
@@ -142,14 +290,15 @@ function KindStripe({ kind }: { kind: TodayItem['kind'] }) {
 
 function EmptyState() {
   return (
-    <div className="card-journal text-center py-10">
+    <div className="card-journal text-center py-10 mb-8">
       <div className="text-4xl mb-3">🌿</div>
-      <h3 className="font-serif text-2xl mb-2">Nothing urgent today.</h3>
-      <p className="text-charcoal-500 dark:text-charcoal-300 mb-4">
-        Quiet days are a good time to reach out, not react. Who crossed your mind recently?
+      <h3 className="font-serif text-2xl mb-2">A blank page.</h3>
+      <p className="text-charcoal-500 dark:text-charcoal-300 mb-4 max-w-md mx-auto">
+        Add the first person on your mind. Aurzo learns from them — birthdays, how you met,
+        what you do together — and quietly nudges you when they need you.
       </p>
-      <div className="flex justify-center gap-3">
-        <Link to="/relationships/people" className="btn-primary">Browse people</Link>
+      <div className="flex justify-center gap-3 flex-wrap">
+        <Link to="/relationships/people/new" className="btn-primary">Add someone</Link>
         <Link to="/relationships/advisor" className="btn-ghost">Ask the advisor</Link>
       </div>
     </div>

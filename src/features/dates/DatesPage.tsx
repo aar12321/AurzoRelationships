@@ -50,8 +50,9 @@ export default function DatesPage() {
       <header className="mb-6 flex items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl">Important dates</h1>
-          <p className="text-charcoal-500 mt-1">
-            Never miss a moment that matters to someone you love.
+          <p className="text-charcoal-500 dark:text-charcoal-300 mt-1">
+            Birthdays, anniversaries, anything you want to remember. We'll nudge
+            you in advance — by default 14, 7, 3, and 0 days out.
           </p>
         </div>
         <button className="btn-primary" onClick={() => setShowAdd((v) => !v)}>

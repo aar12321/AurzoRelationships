@@ -10,6 +10,7 @@ import { friendlyError } from '@/services/friendlyError';
 import { toast } from '@/stores/toastStore';
 import { SUGGESTED_PROMPTS } from '@/types/advisor';
 import type { AdvisorMessage, AdvisorThread } from '@/types/advisor';
+import SaveFromChatModal, { type SaveKind } from './SaveFromChatModal';
 
 export default function AdvisorPage() {
   const { user } = useAuthStore();
@@ -24,6 +25,7 @@ export default function AdvisorPage() {
   const [busy, setBusy] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [savePrompt, setSavePrompt] = useState<{ kind: SaveKind; text: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,8 +88,14 @@ export default function AdvisorPage() {
     <section className="animate-bloom">
       <header className="mb-6">
         <h1 className="text-4xl">Advisor</h1>
-        <p className="text-charcoal-500 mt-1">
-          Warm, specific guidance for the relationships in your life.
+        <p className="text-charcoal-500 dark:text-charcoal-300 mt-1">
+          Warm, specific guidance for the relationships in your life — with full
+          context for {people.length === 0 ? 'everyone you add' : `everyone you've added (${people.length})`}.
+        </p>
+        <p className="text-xs text-charcoal-500 dark:text-charcoal-300 mt-2 max-w-2xl">
+          ✨ Tell me what happened ("dinner with Sarah, she got engaged") and tap
+          the small action under your message to save it as a memory, gift idea,
+          or date. Nothing saves until you preview and confirm.
         </p>
       </header>
 
@@ -97,6 +105,14 @@ export default function AdvisorPage() {
           {loadError}{' '}
           <button className="underline" onClick={() => void initThread()}>Retry</button>
         </div>
+      )}
+
+      {savePrompt && (
+        <SaveFromChatModal
+          kind={savePrompt.kind}
+          sourceText={savePrompt.text}
+          onClose={() => setSavePrompt(null)}
+        />
       )}
 
       <div className="card-journal flex flex-col h-[70vh]">
@@ -126,10 +142,20 @@ export default function AdvisorPage() {
                   'inline-block max-w-[80%] rounded-journal px-3 py-2 text-left',
                   m.role === 'user'
                     ? 'bg-terracotta-600 text-ivory-50'
-                    : 'bg-cream-100 text-charcoal-900',
+                    : 'bg-cream-100 text-charcoal-900 dark:bg-charcoal-800 dark:text-cream-50',
                 ].join(' ')}>
                   <pre className="whitespace-pre-wrap font-sans text-sm">{m.content}</pre>
                 </div>
+                {m.role === 'user' && (
+                  <div className="mt-1 flex flex-wrap gap-1.5 justify-end">
+                    <SaveAction onClick={() => setSavePrompt({ kind: 'memory', text: m.content })}
+                      icon="📸" label="Save as memory" />
+                    <SaveAction onClick={() => setSavePrompt({ kind: 'gift', text: m.content })}
+                      icon="🎁" label="Save as gift idea" />
+                    <SaveAction onClick={() => setSavePrompt({ kind: 'date', text: m.content })}
+                      icon="📅" label="Save as date" />
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -162,5 +188,23 @@ export default function AdvisorPage() {
         </form>
       </div>
     </section>
+  );
+}
+
+function SaveAction(props: { onClick: () => void; icon: string; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="text-[11px] inline-flex items-center gap-1 rounded-full px-2 py-0.5
+                 bg-cream-100 dark:bg-charcoal-800
+                 border border-cream-200 dark:border-charcoal-700
+                 text-charcoal-700 dark:text-cream-100
+                 hover:bg-cream-200 dark:hover:bg-charcoal-700 transition-colors"
+      title={props.label}
+    >
+      <span aria-hidden>{props.icon}</span>
+      <span className="hidden sm:inline">{props.label}</span>
+    </button>
   );
 }

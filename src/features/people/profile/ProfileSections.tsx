@@ -5,17 +5,17 @@ import {
 } from '@/types/people';
 
 function Section({
-  title, empty, children,
+  title, children,
 }: { title: string; empty?: string; children?: React.ReactNode }) {
-  const isEmpty = !children;
+  // Empty sections collapse — previously every blank card rendered
+  // placeholder copy, which the latest walkthrough flagged as "empty
+  // squares". The Edit screen is where to fill them in; here we only
+  // show what the user has actually captured.
+  if (!children) return null;
   return (
     <section className="card-journal">
-      <h2 className="font-serif text-xl text-charcoal-900 mb-2">{title}</h2>
-      {isEmpty ? (
-        <p className="text-sm text-charcoal-500">{empty}</p>
-      ) : (
-        <div className="text-charcoal-700 whitespace-pre-wrap">{children}</div>
-      )}
+      <h2 className="font-serif text-xl text-charcoal-900 dark:text-cream-50 mb-2">{title}</h2>
+      <div className="text-charcoal-700 dark:text-cream-100 whitespace-pre-wrap">{children}</div>
     </section>
   );
 }

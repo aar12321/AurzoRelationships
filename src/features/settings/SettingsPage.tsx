@@ -59,9 +59,10 @@ export default function SettingsPage() {
   return (
     <section className="animate-bloom max-w-2xl">
       <header className="mb-6">
-        <h1 className="text-4xl">Settings</h1>
-        <p className="text-charcoal-500 mt-1">
-          Notifications, theme, and privacy. Everything private by default.
+        <h1 className="text-4xl">Profile & settings</h1>
+        <p className="text-charcoal-500 dark:text-charcoal-300 mt-1">
+          Your account, notifications, theme, and privacy. Everything is private
+          by default — toggles below take effect immediately.
         </p>
       </header>
 
